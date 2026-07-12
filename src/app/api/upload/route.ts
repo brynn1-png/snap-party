@@ -20,14 +20,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const filePath = `events/${eventId}/${sessionId}/${Date.now()}.jpg`;
+    const ext = file.type === "image/webp" ? "webp" : "jpg";
+    const contentType = file.type === "image/webp" ? "image/webp" : "image/jpeg";
+    const filePath = `events/${eventId}/${sessionId}/${Date.now()}.${ext}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
     const { error: uploadError } = await supabase.storage
       .from("photos")
       .upload(filePath, buffer, {
-        contentType: "image/jpeg",
+        contentType,
       });
 
     if (uploadError) {
