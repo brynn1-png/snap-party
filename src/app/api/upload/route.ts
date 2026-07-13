@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
     const eventId = formData.get("eventId") as string;
     const sessionId = formData.get("sessionId") as string;
+    const guestName = formData.get("guestName") as string || null;
 
     if (!file || !eventId || !sessionId) {
       return NextResponse.json(
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
       session_id: sessionId,
       image_url: urlData.publicUrl,
       file_size: file.size,
+      guest_name: guestName,
     });
 
     if (dbError) {

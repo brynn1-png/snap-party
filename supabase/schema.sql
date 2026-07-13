@@ -20,6 +20,7 @@ create table if not exists sessions (
   id uuid primary key default uuid_generate_v4(),
   event_id uuid references events(id) on delete cascade not null,
   session_token text unique not null,
+  guest_name text,
   shots_used int not null default 0,
   device text,
   created_at timestamptz not null default now()
@@ -32,7 +33,18 @@ create table if not exists photos (
   session_id uuid references sessions(id) on delete cascade not null,
   image_url text not null,
   file_size int,
+  guest_name text,
   uploaded_at timestamptz not null default now()
+);
+
+-- Messages table (guestbook)
+create table if not exists messages (
+  id uuid primary key default uuid_generate_v4(),
+  event_id uuid references events(id) on delete cascade not null,
+  session_id uuid references sessions(id) on delete cascade not null,
+  guest_name text not null,
+  message text not null,
+  created_at timestamptz not null default now()
 );
 
 -- Indexes
@@ -43,16 +55,23 @@ create index if not exists sessions_event_id on sessions(event_id);
 create index if not exists sessions_session_token on sessions(session_token);
 create index if not exists photos_event_id on photos(event_id);
 create index if not exists photos_session_id on photos(session_id);
+create index if not exists messages_event_id on messages(event_id);
+create index if not exists messages_session_id on messages(session_id);
 
 -- Row Level Security
 alter table events enable row level security;
 alter table sessions enable row level security;
 alter table photos enable row level security;
+alter table messages enable row level security;
 
 -- Events policies
 create policy "Organizers can view their own events"
   on events for select
   using (organizer_id = auth.uid());
+
+create policy "Anyone can view events by slug"
+  on events for select
+  using (true);
 
 create policy "Organizers can create events"
   on events for insert
@@ -98,3 +117,20 @@ create policy "Organizers can delete photos from their events"
 
 -- Storage bucket (run separately in Supabase Dashboard > Storage)
 -- Create a bucket named "photos" with public access
+
+-- Messages policies
+create policy "Anyone can view messages"
+  on messages for select
+  using (true);
+
+create policy "Anyone can insert messages"
+  on messages for insert
+  with check (true);
+
+create policy "Organizers can delete messages from their events"
+  on messages for delete
+  using (
+    event_id in (
+      select id from events where organizer_id = auth.uid()
+    )
+  );

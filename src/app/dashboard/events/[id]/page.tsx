@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import { createClient } from "@/lib/supabase/client";
 import QRCode from "qrcode";
 import Link from "next/link";
+import Carousel from "@/components/Carousel";
 
 interface EventData {
   id: string;
@@ -19,12 +20,21 @@ interface Photo {
   image_url: string;
   uploaded_at: string;
   session_id: string;
+  guest_name: string | null;
 }
 
 interface Session {
   id: string;
   session_token: string;
+  guest_name: string | null;
   shots_used: number;
+  created_at: string;
+}
+
+interface Message {
+  id: string;
+  guest_name: string;
+  message: string;
   created_at: string;
 }
 
@@ -40,6 +50,7 @@ export default function EventDetailPage({
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const supabase = createClient();
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window?.location?.origin;
@@ -73,11 +84,19 @@ export default function EventDetailPage({
 
         const { data: sessionsData } = await supabase
           .from("sessions")
-          .select("*")
+          .select("id, session_token, guest_name, shots_used, created_at")
           .eq("event_id", id)
           .order("created_at", { ascending: false });
 
         if (sessionsData) setSessions(sessionsData);
+
+        const { data: messagesData } = await supabase
+          .from("messages")
+          .select("id, guest_name, message, created_at")
+          .eq("event_id", id)
+          .order("created_at", { ascending: false });
+
+        if (messagesData) setMessages(messagesData);
       }
       setLoading(false);
     }
@@ -101,6 +120,13 @@ export default function EventDetailPage({
         { event: "DELETE", schema: "public", table: "photos", filter: `event_id=eq.${event.id}` },
         (payload) => {
           setPhotos((prev) => prev.filter((p) => p.id !== (payload.old as Photo).id));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `event_id=eq.${event.id}` },
+        (payload) => {
+          setMessages((prev) => [payload.new as Message, ...prev]);
         }
       )
       .subscribe();
@@ -177,7 +203,7 @@ export default function EventDetailPage({
               {photos.length} photos
             </div>
             <div className="nb-tag bg-nb-white">
-              {event.photo_limit} shots/guest
+              15 shots/guest
             </div>
           </div>
         </div>
@@ -214,6 +240,12 @@ export default function EventDetailPage({
       </div>
 
       <h2 className="mb-4 text-xl font-black uppercase text-black">
+        Live Slideshow
+      </h2>
+
+      <Carousel photos={photos} />
+
+      <h2 className="mb-4 text-xl font-black uppercase text-black">
         Live Gallery
       </h2>
 
@@ -235,6 +267,13 @@ export default function EventDetailPage({
                 alt="Event photo"
                 className="aspect-square w-full object-cover"
               />
+              {photo.guest_name && (
+                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                  <p className="text-xs font-bold text-white">
+                    {photo.guest_name}
+                  </p>
+                </div>
+              )}
               <button
                 onClick={() => handleDelete(photo.id)}
                 disabled={deleting === photo.id}
@@ -242,6 +281,35 @@ export default function EventDetailPage({
               >
                 {deleting === photo.id ? "..." : "Delete"}
               </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h2 className="mb-4 mt-8 text-xl font-black uppercase text-black">
+        Guestbook ({messages.length})
+      </h2>
+
+      {messages.length === 0 ? (
+        <div className="nb-card bg-nb-blue p-8 text-center">
+          <p className="text-lg font-bold uppercase text-black">
+            No messages yet
+          </p>
+          <p className="mt-2 text-sm font-medium text-black">
+            Messages from guests will appear here.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {messages.map((msg) => (
+            <div key={msg.id} className="nb-card-sm bg-nb-white p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="nb-tag bg-nb-yellow text-black">{msg.guest_name}</span>
+                <span className="text-xs text-black/50">
+                  {new Date(msg.created_at).toLocaleString()}
+                </span>
+              </div>
+              <p className="font-medium text-black">{msg.message}</p>
             </div>
           ))}
         </div>

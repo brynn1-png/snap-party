@@ -24,7 +24,6 @@ function generateToken(): string {
 
 export default function CreateEventPage() {
   const [name, setName] = useState("");
-  const [photoLimit, setPhotoLimit] = useState(15);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -55,7 +54,7 @@ export default function CreateEventPage() {
         name,
         slug,
         qr_token,
-        photo_limit: photoLimit,
+        photo_limit: 15,
       })
       .select()
       .single();
@@ -88,19 +87,6 @@ export default function CreateEventPage() {
               onChange={(e) => setName(e.target.value)}
               className="w-full border-3 border-black bg-nb-white px-4 py-3 font-medium text-black outline-none focus:bg-nb-lime"
               placeholder="e.g. Sarah & Mike Wedding"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-bold uppercase text-black">
-              Photo Limit per Guest
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={photoLimit}
-              onChange={(e) => setPhotoLimit(Number(e.target.value))}
-              className="w-full border-3 border-black bg-nb-white px-4 py-3 font-medium text-black outline-none focus:bg-nb-lime"
             />
           </div>
           {error && (
