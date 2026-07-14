@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SnapParty — Scan. Shoot. Done.",
+  title: "SnapParty — Every Memory. Instantly Shared.",
   description:
     "The easiest way to collect event photos. Guests scan a QR, take photos in their browser, and photos land live on your dashboard. No app. No login.",
 };

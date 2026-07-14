@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 
 function generateSlug(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -25,10 +26,27 @@ function generateToken(): string {
 export default function CreateEventPage() {
   const [name, setName] = useState("");
   const [photoLimit, setPhotoLimit] = useState(15);
+  const [eventDate, setEventDate] = useState("");
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
+
+  function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Cover photo must be under 5MB");
+      return;
+    }
+    setCoverFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setCoverPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,6 +74,7 @@ export default function CreateEventPage() {
         slug,
         qr_token,
         photo_limit: photoLimit,
+        event_date: eventDate || null,
       })
       .select()
       .single();
@@ -66,56 +85,199 @@ export default function CreateEventPage() {
       return;
     }
 
+    // Upload cover photo if selected
+    if (coverFile && data) {
+      const formData = new FormData();
+      formData.append("file", coverFile);
+      formData.append("eventId", data.id);
+
+      const res = await fetch("/api/upload-cover", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await res.json();
+
+      if (result.url) {
+        await supabase
+          .from("events")
+          .update({ cover_photo_url: result.url })
+          .eq("id", data.id);
+      }
+    }
+
     router.push(`/dashboard/events/${data.id}`);
     router.refresh();
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-12 md:px-8">
-      <div className="nb-card bg-nb-white p-8">
-        <h1 className="mb-6 text-2xl font-black uppercase text-black">
-          Create Event
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-bold uppercase text-black">
-              Event Name
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full border-3 border-black bg-nb-white px-4 py-3 font-medium text-black outline-none focus:bg-nb-lime"
-              placeholder="e.g. Sarah & Mike Wedding"
-            />
+    <div className="mx-auto max-w-lg px-6 py-12 lg:px-8">
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-2 text-sm text-white/30 hover:text-white/60 transition-colors mb-8"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+        Back to Events
+      </Link>
+
+      <div className="relative">
+        <div className="absolute -inset-1 bg-gradient-to-r from-sp-coral/10 via-sp-magenta/10 to-sp-violet/10 rounded-3xl blur-xl" />
+        <div className="relative rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl p-8">
+          <div className="mb-8">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sp-coral to-sp-magenta flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">Create Event</h1>
+            <p className="text-sm text-white/40">Set up a new event in seconds</p>
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-bold uppercase text-black">
-              Photo Limit per Guest
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={photoLimit}
-              onChange={(e) => setPhotoLimit(Number(e.target.value))}
-              className="w-full border-3 border-black bg-nb-white px-4 py-3 font-medium text-black outline-none focus:bg-nb-lime"
-            />
-          </div>
-          {error && (
-            <p className="border-2 border-black bg-nb-pink px-3 py-2 text-sm font-bold text-black">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="nb-btn w-full bg-nb-black py-3 text-white hover:bg-nb-pink disabled:opacity-50"
-          >
-            {loading ? "Creating..." : "Create Event"}
-          </button>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Cover Photo */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-white/60">Cover Photo</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleCoverChange}
+                className="hidden"
+              />
+              {coverPreview ? (
+                <div className="relative rounded-2xl overflow-hidden border border-white/10 group">
+                  <img
+                    src={coverPreview}
+                    alt="Cover preview"
+                    className="w-full h-40 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-sp-midnight/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-sm text-sm font-medium text-white hover:bg-white/20 transition-colors"
+                    >
+                      Change
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setCoverPreview(null); setCoverFile(null); }}
+                      className="px-4 py-2 rounded-xl bg-sp-coral/20 backdrop-blur-sm text-sm font-medium text-sp-coral hover:bg-sp-coral/30 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-40 rounded-2xl border-2 border-dashed border-white/10 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300 flex flex-col items-center justify-center gap-3 group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-white/5 group-hover:bg-white/10 flex items-center justify-center transition-colors">
+                    <svg className="w-6 h-6 text-white/20 group-hover:text-white/40 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v13.5A1.5 1.5 0 003.75 21z" />
+                    </svg>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-white/40">Click to upload cover photo</p>
+                    <p className="text-xs text-white/20 mt-1">JPG, PNG up to 5MB</p>
+                  </div>
+                </button>
+              )}
+            </div>
+
+            {/* Event Name */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-white/60">Event Name</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 outline-none focus:border-sp-coral/50 focus:bg-white/[0.07] transition-all duration-300"
+                placeholder="e.g. Sarah & Mike Wedding"
+              />
+            </div>
+
+            {/* Event Date */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-white/60">Event Date</label>
+              <input
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 outline-none focus:border-sp-coral/50 focus:bg-white/[0.07] transition-all duration-300 [color-scheme:dark]"
+              />
+            </div>
+
+            {/* Photo Limit */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-white/60">Photo Limit per Guest</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={photoLimit}
+                  onChange={(e) => setPhotoLimit(Number(e.target.value))}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 outline-none focus:border-sp-coral/50 focus:bg-white/[0.07] transition-all duration-300"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPhotoLimit(Math.max(1, photoLimit - 1))}
+                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white/60 transition-all"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPhotoLimit(Math.min(100, photoLimit + 1))}
+                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white/60 transition-all"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-white/20">Each guest can take up to this many photos</p>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-sp-coral/10 border border-sp-coral/20">
+                <svg className="w-4 h-4 text-sp-coral flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                <p className="text-sm text-sp-coral">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !name.trim()}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sp-coral to-sp-magenta text-white font-semibold hover:shadow-lg hover:shadow-sp-magenta/25 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Creating...
+                </span>
+              ) : (
+                "Create Event"
+              )}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

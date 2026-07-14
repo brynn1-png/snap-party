@@ -12,6 +12,8 @@ create table if not exists events (
   slug text unique not null,
   qr_token text unique not null,
   photo_limit int not null default 15,
+  event_date date,
+  cover_photo_url text,
   created_at timestamptz not null default now()
 );
 
