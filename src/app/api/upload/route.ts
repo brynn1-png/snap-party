@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
     const eventId = formData.get("eventId") as string;
     const sessionId = formData.get("sessionId") as string;
+    const guestName = formData.get("guestName") as string || null;
 
     if (!file || !eventId || !sessionId) {
       return NextResponse.json(
@@ -20,14 +21,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const filePath = `events/${eventId}/${sessionId}/${Date.now()}.jpg`;
+    const ext = file.type === "image/webp" ? "webp" : "jpg";
+    const contentType = file.type === "image/webp" ? "image/webp" : "image/jpeg";
+    const filePath = `events/${eventId}/${sessionId}/${Date.now()}.${ext}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
     const { error: uploadError } = await supabase.storage
       .from("photos")
       .upload(filePath, buffer, {
-        contentType: "image/jpeg",
+        contentType,
       });
 
     if (uploadError) {
@@ -46,6 +49,7 @@ export async function POST(request: NextRequest) {
       session_id: sessionId,
       image_url: urlData.publicUrl,
       file_size: file.size,
+      guest_name: guestName,
     });
 
     if (dbError) {

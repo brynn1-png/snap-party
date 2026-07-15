@@ -13,14 +13,11 @@ export default function GuestLandingPage() {
 
   useEffect(() => {
     async function init() {
-      console.log("Looking up event with slug:", slug);
       const { data: event, error } = await supabase
         .from("events")
-        .select("id, name, photo_limit")
+        .select("id, name")
         .eq("slug", slug)
         .single();
-
-      console.log("Supabase response:", { event, error });
 
       if (error || !event) {
         console.error("Event lookup failed:", error);
@@ -40,14 +37,15 @@ export default function GuestLandingPage() {
           .single();
 
         if (session) {
-          if (session.shots_used >= event.photo_limit) {
+          if (session.shots_used >= 15) {
             router.push(`/e/${slug}/done`);
             return;
           }
           localStorage.setItem("current_event_id", event.id);
           localStorage.setItem("current_session_token", existingToken);
-          localStorage.setItem("current_photo_limit", String(event.photo_limit));
-          router.push(`/e/${slug}/camera`);
+
+          const existingName = localStorage.getItem("current_guest_name");
+          router.push(existingName ? `/e/${slug}/camera` : `/e/${slug}/name`);
           return;
         }
       }
@@ -61,7 +59,7 @@ export default function GuestLandingPage() {
   async function handleStart() {
     const { data: event } = await supabase
       .from("events")
-      .select("id, photo_limit")
+      .select("id")
       .eq("slug", slug)
       .single();
 
@@ -79,9 +77,8 @@ export default function GuestLandingPage() {
     localStorage.setItem(`session_${event.id}`, sessionToken);
     localStorage.setItem("current_event_id", event.id);
     localStorage.setItem("current_session_token", sessionToken);
-    localStorage.setItem("current_photo_limit", String(event.photo_limit));
 
-    router.push(`/e/${slug}/camera`);
+    router.push(`/e/${slug}/name`);
   }
 
   if (status === "loading") {

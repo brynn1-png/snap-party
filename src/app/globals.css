@@ -214,3 +214,30 @@ h1, h2, h3, h4, h5, h6 {
 .curved-bottom {
   border-radius: 0 0 50% 50% / 0 0 100% 100%;
 }
+
+@keyframes slide-out-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes slide-out-right {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes slide-in {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-slide-out-left {
+  animation: slide-out-left 0.5s ease-in-out forwards;
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.5s ease-in-out forwards;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.5s ease-in-out forwards;
+}
