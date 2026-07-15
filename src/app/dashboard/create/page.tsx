@@ -277,6 +277,7 @@ export default function CreateEventPage() {
               )}
             </button>
           </form>
+        </div>
       </div>
     </div>
   );
