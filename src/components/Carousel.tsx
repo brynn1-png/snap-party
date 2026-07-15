@@ -22,15 +22,15 @@ export default function Carousel({ photos }: CarouselProps) {
     let animId: number;
     let position = 0;
     const speed = 1;
+    const el = track;
 
     function animate() {
-      if (!track) return;
       position -= speed;
-      const halfWidth = track.scrollWidth / 2;
+      const halfWidth = el.scrollWidth / 2;
       if (Math.abs(position) >= halfWidth) {
         position = 0;
       }
-      track.style.transform = `translateX(${position}px)`;
+      el.style.transform = `translateX(${position}px)`;
       animId = requestAnimationFrame(animate);
     }
 
