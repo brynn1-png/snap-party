@@ -296,15 +296,15 @@ export default function CameraPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-nb-black px-4">
-        <div className="nb-card bg-nb-pink p-8 text-center">
-          <p className="mb-4 text-lg font-bold text-black">{error}</p>
+      <div className="flex min-h-screen items-center justify-center bg-sp-midnight px-4">
+        <div className="rounded-2xl bg-sp-coral/10 border border-sp-coral/20 p-8 text-center">
+          <p className="mb-4 text-lg font-semibold text-sp-coral">{error}</p>
           <button
             onClick={() => {
               setError("");
               startCamera(facingMode);
             }}
-            className="nb-btn bg-nb-white px-6 py-3 text-black"
+            className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-medium text-white hover:bg-white/10 transition-all duration-300"
           >
             Try Again
           </button>
@@ -314,7 +314,7 @@ export default function CameraPage() {
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-nb-black">
+    <div className="relative h-screen w-screen overflow-hidden bg-sp-midnight">
       <video
         ref={videoRef}
         autoPlay
@@ -334,7 +334,7 @@ export default function CameraPage() {
         <img
           src={capturedImage}
           alt=""
-          className="pointer-events-none absolute z-30 rounded-lg border-2 border-white shadow-lg"
+          className="pointer-events-none absolute z-30 rounded-lg border border-white/10 shadow-lg"
           style={{
             top: "50%",
             left: "50%",
@@ -364,36 +364,36 @@ export default function CameraPage() {
       `}</style>
 
       {/* Top bar */}
-      <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between bg-black/60 px-4 py-4">
+      <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between bg-black/60 backdrop-blur-sm px-4 py-4">
         <div className="flex items-center gap-2">
-          <div className="nb-tag bg-nb-lime text-black">
+          <div className="px-3 py-1 rounded-full bg-sp-success/20 border border-sp-success/30 text-xs font-medium text-sp-success">
             {shotsUsed + pendingCount} / {PHOTO_LIMIT}
           </div>
           {pendingCount > 0 && (
-            <div className="nb-tag bg-nb-orange text-black">
+            <div className="px-3 py-1 rounded-full bg-sp-warning/20 border border-sp-warning/30 text-xs font-medium text-sp-warning">
               {pendingCount} uploading
             </div>
           )}
           {queuedCount > 0 && (
-            <div className="nb-tag bg-nb-pink text-black">
+            <div className="px-3 py-1 rounded-full bg-sp-coral/20 border border-sp-coral/30 text-xs font-medium text-sp-coral">
               {queuedCount} queued
             </div>
           )}
         </div>
         <button
           onClick={toggleCamera}
-          className="nb-btn bg-nb-white px-4 py-2 text-sm text-black"
+          className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 text-sm font-medium text-white hover:bg-white/20 transition-all duration-300"
         >
           Flip
         </button>
       </div>
 
       {/* Bottom bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center bg-black/60 px-4 py-8">
+      <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 py-8">
         <button
           onClick={capture}
           disabled={!ready || shotsUsed + pendingCount >= PHOTO_LIMIT}
-          className="h-20 w-20 rounded-full border-4 border-white bg-nb-pink transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
+          className="h-20 w-20 rounded-full border-4 border-white/30 bg-gradient-to-r from-sp-coral to-sp-magenta transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
         >
           <span className="text-2xl">📸</span>
         </button>

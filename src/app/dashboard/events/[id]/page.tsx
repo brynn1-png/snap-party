@@ -385,30 +385,32 @@ export default function EventDetailPage({
         </div>
       )}
 
-      <h2 className="mb-4 mt-8 text-xl font-black uppercase text-black">
+      <h2 className="mb-4 mt-8 text-xl font-semibold text-white">
         Guestbook ({messages.length})
       </h2>
 
       {messages.length === 0 ? (
-        <div className="nb-card bg-nb-blue p-8 text-center">
-          <p className="text-lg font-bold uppercase text-black">
+        <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-8 text-center">
+          <p className="text-lg font-semibold text-white/60">
             No messages yet
           </p>
-          <p className="mt-2 text-sm font-medium text-black">
+          <p className="mt-2 text-sm text-white/30">
             Messages from guests will appear here.
           </p>
         </div>
       ) : (
         <div className="space-y-3">
           {messages.map((msg) => (
-            <div key={msg.id} className="nb-card-sm bg-nb-white p-4">
+            <div key={msg.id} className="rounded-2xl bg-white/[0.03] border border-white/10 p-4">
               <div className="mb-2 flex items-center gap-2">
-                <span className="nb-tag bg-nb-yellow text-black">{msg.guest_name}</span>
-                <span className="text-xs text-black/50">
+                <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-white/60">
+                  {msg.guest_name}
+                </span>
+                <span className="text-xs text-white/30">
                   {new Date(msg.created_at).toLocaleString()}
                 </span>
               </div>
-              <p className="font-medium text-black">{msg.message}</p>
+              <p className="text-sm font-medium text-white/80">{msg.message}</p>
             </div>
           ))}
         </div>

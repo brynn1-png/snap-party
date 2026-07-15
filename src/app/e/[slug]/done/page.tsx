@@ -116,110 +116,119 @@ export default function DonePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-nb-lime px-4">
-        <div className="nb-card bg-nb-white p-8 text-center">
-          <p className="font-bold uppercase">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-sp-midnight px-4">
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-8 text-center">
+          <p className="font-medium text-white/40">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-nb-lime px-4 py-12">
+    <div className="min-h-screen bg-sp-midnight px-4 py-12">
       <div className="mx-auto max-w-lg">
         {/* Header */}
-        <div className="nb-card mb-8 bg-nb-white p-8 text-center">
-          <div className="mb-4 text-6xl">🎉</div>
-          <h1 className="mb-2 text-3xl font-black uppercase text-black">
-            You&apos;re All Done!
-          </h1>
-          {guestName && (
-            <p className="mb-1 text-lg font-bold text-black">
-              Thanks, {guestName}!
-            </p>
-          )}
-          <p className="mb-2 font-medium text-black">
-            Your photos have been uploaded.
-          </p>
-          {eventName && (
-            <div className="nb-card-sm mt-4 bg-nb-yellow p-3">
-              <p className="text-sm font-bold uppercase text-black">
-                📸 {eventName}
+        <div className="relative mb-8">
+          <div className="absolute -inset-1 bg-gradient-to-r from-sp-coral/10 via-sp-magenta/10 to-sp-violet/10 rounded-3xl blur-xl" />
+          <div className="relative rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl p-8 text-center">
+            <div className="mb-4 text-6xl">🎉</div>
+            <h1 className="mb-2 text-3xl font-bold text-white">
+              You&apos;re All Done!
+            </h1>
+            {guestName && (
+              <p className="mb-1 text-lg text-white/60">
+                Thanks, {guestName}!
               </p>
-            </div>
-          )}
+            )}
+            <p className="mb-2 text-sm text-white/40">
+              Your photos have been uploaded.
+            </p>
+            {eventName && (
+              <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                <span className="text-sm font-medium text-white/60">
+                  📸 {eventName}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Photos */}
         {photos.length > 0 && (
-          <div className="nb-card mb-8 bg-nb-white p-6">
-            <h2 className="mb-4 text-lg font-black uppercase text-black">
-              Your Photos ({photos.length})
-            </h2>
-            <div className="mb-4 grid grid-cols-3 gap-3">
-              {photos.map((photo) => (
-                <div key={photo.id} className="nb-card-sm overflow-hidden bg-nb-white">
-                  <img
-                    src={photo.image_url}
-                    alt="Your photo"
-                    className="aspect-square w-full object-cover"
-                  />
-                </div>
-              ))}
+          <div className="relative mb-8">
+            <div className="absolute -inset-1 bg-gradient-to-r from-sp-coral/10 to-sp-violet/10 rounded-3xl blur-xl" />
+            <div className="relative rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl p-6">
+              <h2 className="mb-4 text-lg font-semibold text-white">
+                Your Photos ({photos.length})
+              </h2>
+              <div className="mb-4 grid grid-cols-3 gap-3">
+                {photos.map((photo) => (
+                  <div key={photo.id} className="rounded-xl overflow-hidden border border-white/5">
+                    <img
+                      src={photo.image_url}
+                      alt="Your photo"
+                      className="aspect-square w-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {downloading ? "Preparing ZIP..." : `Download All (${photos.length})`}
+              </button>
             </div>
-            <button
-              onClick={handleDownload}
-              disabled={downloading}
-              className="nb-btn w-full bg-nb-lime py-3 text-black hover:bg-nb-yellow disabled:opacity-50"
-            >
-              {downloading ? "Preparing ZIP..." : `Download All (${photos.length})`}
-            </button>
           </div>
         )}
 
         {photos.length === 0 && (
-          <div className="nb-card mb-8 bg-nb-white p-6 text-center">
-            <p className="font-medium text-black">No photos found for your session.</p>
+          <div className="mb-8 rounded-3xl bg-white/[0.03] border border-white/10 p-6 text-center">
+            <p className="text-sm text-white/40">No photos found for your session.</p>
           </div>
         )}
 
         {/* Guestbook */}
-        <div className="nb-card bg-nb-white p-6">
-          <h2 className="mb-4 text-lg font-black uppercase text-black">
-            Leave a Message
-          </h2>
-          {sent ? (
-            <div className="nb-card-sm bg-nb-lime p-4 text-center">
-              <p className="font-bold uppercase text-black">
-                🎉 Message sent! Thanks for being part of the memories.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSendMessage} className="space-y-3">
-              {guestName && (
-                <div className="nb-card-sm bg-nb-yellow p-3">
-                  <p className="text-sm font-bold uppercase text-black">
-                    ✍️ {guestName}
-                  </p>
-                </div>
-              )}
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Write a message for the organizer..."
-                rows={3}
-                required
-                className="w-full resize-none border-3 border-black bg-nb-white px-4 py-3 font-medium text-black outline-none focus:bg-nb-lime"
-              />
-              <button
-                type="submit"
-                disabled={sending || !message.trim()}
-                className="nb-btn w-full bg-nb-pink py-3 text-black hover:bg-nb-orange disabled:opacity-50"
-              >
-                {sending ? "Sending..." : "Send Message"}
-              </button>
-            </form>
-          )}
+        <div className="relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-sp-violet/10 to-sp-magenta/10 rounded-3xl blur-xl" />
+          <div className="relative rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white">
+              Leave a Message
+            </h2>
+            {sent ? (
+              <div className="rounded-xl bg-sp-success/10 border border-sp-success/20 p-4 text-center">
+                <p className="text-sm font-medium text-sp-success">
+                  🎉 Message sent! Thanks for being part of the memories.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSendMessage} className="space-y-3">
+                {guestName && (
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                    <span className="text-sm font-medium text-white/60">
+                      ✍️ {guestName}
+                    </span>
+                  </div>
+                )}
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Write a message for the organizer..."
+                  rows={3}
+                  required
+                  className="w-full resize-none rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-sp-coral/50 focus:bg-white/[0.07] transition-all duration-300"
+                />
+                <button
+                  type="submit"
+                  disabled={sending || !message.trim()}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-sp-coral to-sp-magenta text-white font-semibold hover:shadow-lg hover:shadow-sp-magenta/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {sending ? "Sending..." : "Send Message"}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </div>

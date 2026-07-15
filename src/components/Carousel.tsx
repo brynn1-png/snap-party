@@ -24,6 +24,7 @@ export default function Carousel({ photos }: CarouselProps) {
     const speed = 1;
 
     function animate() {
+      if (!track) return;
       position -= speed;
       const halfWidth = track.scrollWidth / 2;
       if (Math.abs(position) >= halfWidth) {
@@ -42,13 +43,13 @@ export default function Carousel({ photos }: CarouselProps) {
   const doubled = [...photos, ...photos];
 
   return (
-    <div className="nb-card relative mb-8 overflow-hidden bg-nb-black">
+    <div className="relative mb-8 overflow-hidden rounded-3xl bg-white/[0.03] border border-white/10">
       <div className="py-4">
         <div ref={trackRef} className="flex gap-4 px-4">
           {doubled.map((photo, i) => (
             <div
               key={`${photo.id}-${i}`}
-              className="nb-card-sm relative flex-shrink-0 overflow-hidden bg-nb-white"
+              className="relative flex-shrink-0 overflow-hidden rounded-xl border border-white/5"
               style={{ width: "300px", height: "300px" }}
             >
               <img
@@ -57,8 +58,8 @@ export default function Carousel({ photos }: CarouselProps) {
                 className="h-full w-full object-cover"
               />
               {photo.guest_name && (
-                <div className="absolute bottom-2 left-2 nb-tag bg-nb-yellow text-black text-xs">
-                  📸 {photo.guest_name}
+                <div className="absolute bottom-2 left-2 px-3 py-1 rounded-full bg-black/60 backdrop-blur-sm text-xs font-medium text-white">
+                  {photo.guest_name}
                 </div>
               )}
             </div>
@@ -66,7 +67,7 @@ export default function Carousel({ photos }: CarouselProps) {
         </div>
       </div>
 
-      <div className="absolute bottom-4 right-4 nb-tag bg-nb-white text-black">
+      <div className="absolute bottom-4 right-4 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-white/60">
         {photos.length} photos
       </div>
     </div>

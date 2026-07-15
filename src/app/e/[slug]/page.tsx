@@ -83,9 +83,9 @@ export default function GuestLandingPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-nb-yellow">
-        <div className="nb-card bg-nb-white p-8 text-center">
-          <p className="font-bold uppercase">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-sp-midnight px-4">
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-8 text-center">
+          <p className="font-medium text-white/40">Loading...</p>
         </div>
       </div>
     );
@@ -93,9 +93,9 @@ export default function GuestLandingPage() {
 
   if (status === "error") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-nb-yellow">
-        <div className="nb-card bg-nb-pink p-8 text-center">
-          <p className="text-xl font-bold uppercase text-black">
+      <div className="flex min-h-screen items-center justify-center bg-sp-midnight px-4">
+        <div className="rounded-2xl bg-sp-coral/10 border border-sp-coral/20 p-8 text-center">
+          <p className="text-xl font-semibold text-sp-coral">
             Event not found
           </p>
         </div>
@@ -104,24 +104,32 @@ export default function GuestLandingPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-nb-yellow px-4">
-      <div className="nb-card w-full max-w-md bg-nb-white p-8 text-center">
-        <div className="mb-4 text-6xl">📸</div>
-        <h1 className="mb-2 text-2xl font-black uppercase text-black">
-          {eventName}
-        </h1>
-        <p className="mb-6 font-medium text-black">
-          Tap below to start taking photos. No app needed.
-        </p>
-        <button
-          onClick={handleStart}
-          className="nb-btn w-full bg-nb-pink py-4 text-lg text-black hover:bg-nb-orange"
-        >
-          Start Snapping
-        </button>
-        <p className="mt-4 text-xs font-medium text-black/60">
-          Photos upload instantly to the organizer
-        </p>
+    <div className="flex min-h-screen items-center justify-center bg-sp-midnight overflow-hidden px-4">
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-sp-coral/8 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-sp-violet/8 blur-[100px] pointer-events-none" />
+
+      <div className="relative z-10 w-full max-w-md">
+        <div className="relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-sp-coral/10 via-sp-magenta/10 to-sp-violet/10 rounded-3xl blur-xl" />
+          <div className="relative rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl p-8 text-center">
+            <div className="mb-4 text-6xl">📸</div>
+            <h1 className="mb-2 text-2xl font-bold text-white">
+              {eventName}
+            </h1>
+            <p className="mb-6 text-sm text-white/40">
+              Tap below to start taking photos. No app needed.
+            </p>
+            <button
+              onClick={handleStart}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sp-coral to-sp-magenta text-white font-semibold hover:shadow-lg hover:shadow-sp-magenta/25 transition-all duration-300 hover:scale-[1.02]"
+            >
+              Start Snapping
+            </button>
+            <p className="mt-4 text-xs text-white/20">
+              Photos upload instantly to the organizer
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
