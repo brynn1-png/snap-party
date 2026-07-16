@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface Event {
   id: string;
@@ -28,48 +29,55 @@ const coverGradients = [
 export default function DashboardPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
   const supabase = createClient();
+  const pathname = usePathname();
+
+  const fetchEvents = useCallback(async () => {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data: eventsData } = await supabase
+      .from("events")
+      .select("*")
+      .eq("organizer_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (eventsData) {
+      const eventsWithCounts = await Promise.all(
+        eventsData.map(async (event) => {
+          const [{ count: photoCount }, { count: sessionCount }] =
+            await Promise.all([
+              supabase
+                .from("photos")
+                .select("*", { count: "exact", head: true })
+                .eq("event_id", event.id),
+              supabase
+                .from("sessions")
+                .select("*", { count: "exact", head: true })
+                .eq("event_id", event.id),
+            ]);
+          return {
+            ...event,
+            photo_count: photoCount || 0,
+            session_count: sessionCount || 0,
+          };
+        })
+      );
+      setEvents(eventsWithCounts);
+    }
+    setLoading(false);
+  }, [supabase]);
 
   useEffect(() => {
-    async function fetchEvents() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: eventsData } = await supabase
-        .from("events")
-        .select("*")
-        .eq("organizer_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (eventsData) {
-        const eventsWithCounts = await Promise.all(
-          eventsData.map(async (event) => {
-            const [{ count: photoCount }, { count: sessionCount }] =
-              await Promise.all([
-                supabase
-                  .from("photos")
-                  .select("*", { count: "exact", head: true })
-                  .eq("event_id", event.id),
-                supabase
-                  .from("sessions")
-                  .select("*", { count: "exact", head: true })
-                  .eq("event_id", event.id),
-              ]);
-            return {
-              ...event,
-              photo_count: photoCount || 0,
-              session_count: sessionCount || 0,
-            };
-          })
-        );
-        setEvents(eventsWithCounts);
-      }
-      setLoading(false);
-    }
     fetchEvents();
-  }, [supabase]);
+  }, [pathname, fetchEvents]);
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-12 lg:px-8">
@@ -144,10 +152,11 @@ export default function DashboardPage() {
             <div className="relative rounded-3xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all duration-300 overflow-hidden">
               {/* Cover photo */}
               <div className="relative h-36 overflow-hidden">
-                {event.cover_photo_url ? (
+                {event.cover_photo_url && !brokenImages.has(event.id) ? (
                   <img
                     src={event.cover_photo_url}
                     alt={event.name}
+                    onError={() => setBrokenImages((prev) => new Set(prev).add(event.id))}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 ) : (
