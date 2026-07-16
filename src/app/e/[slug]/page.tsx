@@ -65,6 +65,16 @@ export default function GuestLandingPage() {
 
     if (!event) return;
 
+    // Clear stale session data from any previous events
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith("session_") || key === "current_session_token" || key === "current_guest_name")) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+
     localStorage.setItem("current_event_id", event.id);
     router.push(`/e/${slug}/name`);
   }
