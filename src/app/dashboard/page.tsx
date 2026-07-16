@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,16 +30,15 @@ export default function DashboardPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+  const fetchedOnce = useRef(false);
   const supabase = createClient();
   const pathname = usePathname();
 
   const fetchEvents = useCallback(async () => {
-    setLoading(true);
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      setLoading(false);
       return;
     }
 
@@ -73,11 +72,16 @@ export default function DashboardPage() {
       );
       setEvents(eventsWithCounts);
     }
-    setLoading(false);
+    if (!fetchedOnce.current) {
+      fetchedOnce.current = true;
+      setLoading(false);
+    }
   }, [supabase]);
 
   useEffect(() => {
     fetchEvents();
+    const interval = setInterval(fetchEvents, 3000);
+    return () => clearInterval(interval);
   }, [pathname, fetchEvents]);
 
   return (
