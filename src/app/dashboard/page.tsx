@@ -58,10 +58,11 @@ export default function DashboardPage() {
                 .from("photos")
                 .select("*", { count: "exact", head: true })
                 .eq("event_id", event.id),
-              supabase
-                .from("sessions")
-                .select("*", { count: "exact", head: true })
-                .eq("event_id", event.id),
+                supabase
+                  .from("sessions")
+                  .select("*", { count: "exact", head: true })
+                  .eq("event_id", event.id)
+                  .not("guest_name", "is", null),
             ]);
           return {
             ...event,

@@ -15,7 +15,7 @@ export default function GuestLandingPage() {
     async function init() {
       const { data: event, error } = await supabase
         .from("events")
-        .select("id, name")
+        .select("id, name, photo_limit")
         .eq("slug", slug)
         .single();
 
@@ -37,7 +37,7 @@ export default function GuestLandingPage() {
           .single();
 
         if (session) {
-          if (session.shots_used >= 15) {
+          if (session.shots_used >= (event.photo_limit ?? 15)) {
             router.push(`/e/${slug}/done`);
             return;
           }
@@ -65,19 +65,7 @@ export default function GuestLandingPage() {
 
     if (!event) return;
 
-    const sessionToken = crypto.randomUUID();
-    const { error } = await supabase.from("sessions").insert({
-      event_id: event.id,
-      session_token: sessionToken,
-      device: navigator.userAgent,
-    });
-
-    if (error) return;
-
-    localStorage.setItem(`session_${event.id}`, sessionToken);
     localStorage.setItem("current_event_id", event.id);
-    localStorage.setItem("current_session_token", sessionToken);
-
     router.push(`/e/${slug}/name`);
   }
 

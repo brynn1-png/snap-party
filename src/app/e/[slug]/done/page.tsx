@@ -46,9 +46,14 @@ export default function DonePage() {
 
       const { data: event } = await supabase
         .from("events")
-        .select("name")
+        .select("id, name")
         .eq("id", session.event_id)
         .single();
+
+      if (!event || event.id !== session.event_id) {
+        setLoading(false);
+        return;
+      }
 
       if (event) setEventName(event.name);
 

@@ -4,10 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import imageCompression from "browser-image-compression";
-import { enqueuePhoto, getQueueCount } from "@/lib/offlineQueue";
+import { enqueuePhoto, removeQueuedPhoto, getQueueCount } from "@/lib/offlineQueue";
 import { processQueue, startSyncListener } from "@/lib/syncWorker";
-
-const PHOTO_LIMIT = 15;
 
 export default function CameraPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -15,6 +13,7 @@ export default function CameraPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [photoLimit, setPhotoLimit] = useState(15);
   const [shotsUsed, setShotsUsed] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
@@ -27,6 +26,7 @@ export default function CameraPage() {
   const supabase = createClient();
   const shotsUsedRef = useRef(0);
   const guestNameRef = useRef("");
+  const photoLimitRef = useRef(15);
 
   const startCamera = useCallback(async (facing: "user" | "environment") => {
     if (streamRef.current) {
@@ -63,18 +63,40 @@ export default function CameraPage() {
     guestNameRef.current = guestName || "";
 
     async function loadSession() {
+      const { data: eventData } = await supabase
+        .from("events")
+        .select("id, photo_limit")
+        .eq("slug", slug)
+        .single();
+
+      if (!eventData) {
+        router.push(`/e/${slug}`);
+        return;
+      }
+
+      setPhotoLimit(eventData.photo_limit);
+
       const { data: session } = await supabase
         .from("sessions")
-        .select("id, shots_used, guest_name")
+        .select("id, shots_used, guest_name, event_id")
         .eq("session_token", token)
         .single();
+
+      if (!session || session.event_id !== eventData.id) {
+        localStorage.removeItem("current_session_token");
+        localStorage.removeItem("current_event_id");
+        router.push(`/e/${slug}`);
+        return;
+      }
 
       if (session) {
         setShotsUsed(session.shots_used);
         shotsUsedRef.current = session.shots_used;
         setInitialized(true);
 
-        if (session.shots_used >= PHOTO_LIMIT) {
+        const limit = eventData?.photo_limit ?? 15;
+        photoLimitRef.current = limit;
+        if (session.shots_used >= limit) {
           router.push(`/e/${slug}/done`);
           return;
         }
@@ -107,13 +129,44 @@ export default function CameraPage() {
         await processQueue((_, synced) => {
           setQueuedCount((prev) => Math.max(0, prev - synced));
         });
+
+        // Check if guest reached limit after queue processed
+        const sessionToken = localStorage.getItem("current_session_token");
+        if (sessionToken) {
+          const { data: session } = await supabase
+            .from("sessions")
+            .select("shots_used")
+            .eq("session_token", sessionToken)
+            .single();
+
+          if (session && session.shots_used >= photoLimitRef.current) {
+            setShotsUsed(session.shots_used);
+            shotsUsedRef.current = session.shots_used;
+            router.push(`/e/${slug}/done`);
+          }
+        }
       }
     }
     initQueue();
 
-    const stopListener = startSyncListener((status, synced) => {
+    const stopListener = startSyncListener(async (status, synced) => {
       if (status === "idle" && synced > 0) {
         setQueuedCount((prev) => Math.max(0, prev - synced));
+
+        const sessionToken = localStorage.getItem("current_session_token");
+        if (sessionToken) {
+          const { data: session } = await supabase
+            .from("sessions")
+            .select("shots_used")
+            .eq("session_token", sessionToken)
+            .single();
+
+          if (session && session.shots_used >= photoLimitRef.current) {
+            setShotsUsed(session.shots_used);
+            shotsUsedRef.current = session.shots_used;
+            router.push(`/e/${slug}/done`);
+          }
+        }
       }
     });
 
@@ -145,70 +198,58 @@ export default function CameraPage() {
   }
 
   async function uploadInBackground(compressedFile: File, eventId: string, sessionId: string, guestName: string) {
-    if (!navigator.onLine) {
-      await enqueuePhoto({
-        id: crypto.randomUUID(),
-        blob: compressedFile,
-        eventId,
-        sessionId,
-        guestName,
-        timestamp: Date.now(),
-      });
-      setQueuedCount((prev) => prev + 1);
-      setPendingCount((prev) => Math.max(0, prev - 1));
-      return;
-    }
+    const photoId = crypto.randomUUID();
 
-    const formData = new FormData();
-    formData.append("file", compressedFile);
-    formData.append("eventId", eventId);
-    formData.append("sessionId", sessionId);
-    formData.append("guestName", guestName);
-
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        setShotsUsed(result.shotsUsed);
-        shotsUsedRef.current = result.shotsUsed;
-
-        if (result.shotsUsed >= PHOTO_LIMIT) {
-          router.push(`/e/${slug}/done`);
-        }
-      } else {
-        await enqueuePhoto({
-          id: crypto.randomUUID(),
-          blob: compressedFile,
-          eventId,
-          sessionId,
-          guestName,
-          timestamp: Date.now(),
-        });
-        setQueuedCount((prev) => prev + 1);
-      }
-    } catch {
-      await enqueuePhoto({
-        id: crypto.randomUUID(),
-        blob: compressedFile,
-        eventId,
-        sessionId,
-        guestName,
-        timestamp: Date.now(),
-      });
-      setQueuedCount((prev) => prev + 1);
-    }
-
+    // Always save to IndexedDB first so the photo is never lost
+    await enqueuePhoto({
+      id: photoId,
+      blob: compressedFile,
+      eventId,
+      sessionId,
+      guestName,
+      timestamp: Date.now(),
+    });
+    setQueuedCount((prev) => prev + 1);
     setPendingCount((prev) => Math.max(0, prev - 1));
+
+    // If online, try to upload immediately
+    if (navigator.onLine) {
+      try {
+        const formData = new FormData();
+        formData.append("file", compressedFile);
+        formData.append("eventId", eventId);
+        formData.append("sessionId", sessionId);
+        formData.append("guestName", guestName);
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          // Upload succeeded — remove from queue
+          try { await removeQueuedPhoto(photoId); } catch {}
+          setQueuedCount((prev) => Math.max(0, prev - 1));
+
+          setShotsUsed(result.shotsUsed);
+          shotsUsedRef.current = result.shotsUsed;
+
+          if (result.shotsUsed >= photoLimit) {
+            router.push(`/e/${slug}/done`);
+          }
+        }
+        // Upload failed — stays in queue, will retry later
+      } catch {
+        // Fetch failed — stays in queue, will retry later
+      }
+    }
   }
 
   async function capture() {
     if (!videoRef.current || !canvasRef.current) return;
-    if (shotsUsedRef.current + pendingCount >= PHOTO_LIMIT) return;
+    if (shotsUsedRef.current + pendingCount + queuedCount >= photoLimit) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -269,20 +310,27 @@ export default function CameraPage() {
         }
       );
 
-      const eventId = localStorage.getItem("current_event_id");
       const sessionToken = localStorage.getItem("current_session_token");
       const guestName = localStorage.getItem("current_guest_name") || "";
-      if (!eventId || !sessionToken) return;
+      if (!sessionToken) return;
 
       const { data: session } = await supabase
         .from("sessions")
-        .select("id")
+        .select("id, event_id")
         .eq("session_token", sessionToken)
         .single();
 
       if (!session) return;
 
-      uploadInBackground(compressedFile, eventId, session.id, guestName);
+      const { data: eventData } = await supabase
+        .from("events")
+        .select("id")
+        .eq("slug", slug)
+        .single();
+
+      if (!eventData || session.event_id !== eventData.id) return;
+
+      uploadInBackground(compressedFile, eventData.id, session.id, guestName);
     } catch {
       setPendingCount((prev) => Math.max(0, prev - 1));
     }
@@ -387,7 +435,7 @@ export default function CameraPage() {
             <svg className="h-3.5 w-3.5 text-sp-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
             </svg>
-            <span className="text-xs font-semibold text-sp-success">{shotsUsed + pendingCount} / {PHOTO_LIMIT}</span>
+            <span className="text-xs font-semibold text-sp-success">{shotsUsed + pendingCount} / {photoLimit}</span>
           </div>
 
           {/* Uploading badge */}
@@ -437,7 +485,7 @@ export default function CameraPage() {
           {/* Main button */}
           <button
             onClick={capture}
-            disabled={!ready || shotsUsed + pendingCount >= PHOTO_LIMIT}
+            disabled={!ready || shotsUsed + pendingCount >= photoLimit}
             className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-sp-coral via-sp-magenta to-sp-violet shadow-xl shadow-sp-magenta/20 transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             {/* Inner white ring */}
@@ -451,7 +499,7 @@ export default function CameraPage() {
 
         {/* Helper text */}
         <p className="text-xs font-medium text-white/30">
-          {shotsUsed + pendingCount >= PHOTO_LIMIT ? "You've reached the limit" : "Tap to capture"}
+          {shotsUsed + pendingCount >= photoLimit ? "You've reached the limit" : "Tap to capture"}
         </p>
       </div>
     </div>
