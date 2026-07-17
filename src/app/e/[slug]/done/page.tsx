@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { processQueue, startSyncListener } from "@/lib/syncWorker";
 
 interface Photo {
   id: string;
@@ -20,9 +21,22 @@ export default function DonePage() {
   const [sent, setSent] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const supabase = createClient();
 
+  const refreshPhotos = useCallback(async (sid: string) => {
+    const { data: photosData } = await supabase
+      .from("photos")
+      .select("id, image_url, uploaded_at")
+      .eq("session_id", sid)
+      .order("uploaded_at", { ascending: true });
+
+    if (photosData) setPhotos(photosData);
+  }, [supabase]);
+
   useEffect(() => {
+    let stopListener: (() => void) | null = null;
+
     async function init() {
       const sessionToken = localStorage.getItem("current_session_token");
       const guest = localStorage.getItem("current_guest_name") || "";
@@ -57,17 +71,29 @@ export default function DonePage() {
 
       if (event) setEventName(event.name);
 
-      const { data: photosData } = await supabase
-        .from("photos")
-        .select("id, image_url, uploaded_at")
-        .eq("session_id", session.id)
-        .order("uploaded_at", { ascending: true });
-
-      if (photosData) setPhotos(photosData);
+      await refreshPhotos(session.id);
       setLoading(false);
+
+      // Process any remaining queued photos in the background
+      setSyncing(true);
+      await processQueue(async (_status, _synced) => {
+        await refreshPhotos(session.id);
+      });
+      setSyncing(false);
+
+      // Listen for online events to retry failed uploads
+      stopListener = startSyncListener(async (_status, _synced) => {
+        setSyncing(true);
+        await refreshPhotos(session.id);
+        setSyncing(false);
+      });
     }
     init();
-  }, [supabase]);
+
+    return () => {
+      stopListener?.();
+    };
+  }, [supabase, refreshPhotos]);
 
   async function handleDownload() {
     setDownloading(true);
@@ -146,8 +172,17 @@ export default function DonePage() {
               </p>
             )}
             <p className="mb-2 text-sm text-white/40">
-              Your photos have been uploaded.
+              {syncing ? "Finishing up your uploads..." : "Your photos have been uploaded."}
             </p>
+            {syncing && (
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <svg className="h-4 w-4 animate-spin text-sp-warning" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span className="text-xs font-medium text-sp-warning">Syncing photos...</span>
+              </div>
+            )}
             {eventName && (
               <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
                 <span className="text-sm font-medium text-white/60">

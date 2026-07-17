@@ -331,6 +331,11 @@ export default function CameraPage() {
       if (!eventData || session.event_id !== eventData.id) return;
 
       uploadInBackground(compressedFile, eventData.id, session.id, guestName);
+
+      // Redirect immediately if user has reached the photo limit — don't wait for uploads
+      if (shotsUsedRef.current + pendingCount + queuedCount + 1 >= photoLimit) {
+        router.push(`/e/${slug}/done`);
+      }
     } catch {
       setPendingCount((prev) => Math.max(0, prev - 1));
     }
@@ -435,7 +440,7 @@ export default function CameraPage() {
             <svg className="h-3.5 w-3.5 text-sp-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
             </svg>
-            <span className="text-xs font-semibold text-sp-success">{shotsUsed + pendingCount} / {photoLimit}</span>
+            <span className="text-xs font-semibold text-sp-success">{shotsUsed + pendingCount + queuedCount} / {photoLimit}</span>
           </div>
 
           {/* Uploading badge */}
@@ -485,7 +490,7 @@ export default function CameraPage() {
           {/* Main button */}
           <button
             onClick={capture}
-            disabled={!ready || shotsUsed + pendingCount >= photoLimit}
+            disabled={!ready || shotsUsed + pendingCount + queuedCount >= photoLimit}
             className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-sp-coral via-sp-magenta to-sp-violet shadow-xl shadow-sp-magenta/20 transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             {/* Inner white ring */}
@@ -499,7 +504,7 @@ export default function CameraPage() {
 
         {/* Helper text */}
         <p className="text-xs font-medium text-white/30">
-          {shotsUsed + pendingCount >= photoLimit ? "You've reached the limit" : "Tap to capture"}
+          {shotsUsed + pendingCount + queuedCount >= photoLimit ? "You've reached the limit" : "Tap to capture"}
         </p>
       </div>
     </div>
