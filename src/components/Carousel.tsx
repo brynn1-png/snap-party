@@ -43,13 +43,13 @@ export default function Carousel({ photos }: CarouselProps) {
   const doubled = [...photos, ...photos];
 
   return (
-    <div className="relative mb-8 overflow-hidden rounded-3xl bg-white/[0.03] border border-white/10">
+    <div className="relative mb-8 overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm">
       <div className="py-4">
         <div ref={trackRef} className="flex gap-4 px-4">
           {doubled.map((photo, i) => (
             <div
               key={`${photo.id}-${i}`}
-              className="relative flex-shrink-0 overflow-hidden rounded-xl border border-white/5"
+              className="relative flex-shrink-0 overflow-hidden rounded-xl border border-gray-100"
               style={{ width: "300px", height: "300px" }}
             >
               <img
@@ -67,7 +67,7 @@ export default function Carousel({ photos }: CarouselProps) {
         </div>
       </div>
 
-      <div className="absolute bottom-4 right-4 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-white/60">
+      <div className="absolute bottom-4 right-4 px-3 py-1 rounded-full bg-white border border-gray-100 shadow-sm text-xs font-medium text-gray-500">
         {photos.length} photos
       </div>
     </div>
