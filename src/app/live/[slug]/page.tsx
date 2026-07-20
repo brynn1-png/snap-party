@@ -8,6 +8,8 @@ interface EventData {
   id: string;
   name: string;
   slug: string;
+  event_date: string | null;
+  cover_photo_url: string | null;
 }
 
 interface Photo {
@@ -59,7 +61,7 @@ export default function LivePage({
     async function fetchData() {
       const { data: eventData } = await supabase
         .from("events")
-        .select("id, name, slug")
+        .select("id, name, slug, event_date, cover_photo_url")
         .eq("slug", slug)
         .single();
 
@@ -112,36 +114,78 @@ export default function LivePage({
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-950">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="h-screen flex items-center justify-center bg-[#0a0a14]">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+          <span className="text-white/60 text-lg tracking-wide">Loading...</span>
+        </div>
       </div>
     );
   }
 
   if (error || !event) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-950">
+      <div className="h-screen flex items-center justify-center bg-[#0a0a14]">
         <div className="text-center">
           <p className="text-white text-xl mb-2">{error || "Event not found"}</p>
-          <p className="text-gray-400 text-sm">This event may not exist or you may not have access.</p>
+          <p className="text-white/40 text-sm">This event may not exist or you may not have access.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950 overflow-hidden">
-      <div className="flex items-center justify-between px-8 py-4">
-        <h1 className="text-white text-2xl font-semibold tracking-tight">
-          {event.name}
-        </h1>
+    <div className="h-screen flex flex-col bg-[#0a0a14] overflow-hidden relative">
+      {/* Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {event.cover_photo_url ? (
+          <>
+            <img
+              src={event.cover_photo_url}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover blur-sm scale-105"
+            />
+            <div className="absolute inset-0 bg-[#0a0a14]/80" />
+          </>
+        ) : (
+          <>
+            <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-violet-600/5 rounded-full blur-[120px]" />
+            <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-fuchsia-600/5 rounded-full blur-[120px]" />
+          </>
+        )}
+      </div>
+
+      {/* Header */}
+      <div className="relative z-10 flex items-center justify-between px-8 py-5">
         <div className="flex items-center gap-4">
-          <span className="text-gray-500 text-sm">
-            {photos.length} {photos.length === 1 ? "photo" : "photos"}
-          </span>
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            </span>
+            <h1 className="text-white text-2xl font-bold tracking-tight">
+              {event.name}
+            </h1>
+          </div>
+          {event.event_date && (
+            <span className="text-white/30 text-sm font-medium">
+              {new Date(event.event_date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-5">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+            <svg className="w-3.5 h-3.5 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+            </svg>
+            <span className="text-white/60 text-sm font-medium tabular-nums">
+              {photos.length}
+            </span>
+          </div>
           <button
             onClick={toggleFullscreen}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all duration-200"
             title="Toggle fullscreen (F)"
           >
             {isFullscreen ? (
@@ -157,12 +201,19 @@ export default function LivePage({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden px-4">
+      {/* Carousel area */}
+      <div className="relative z-10 flex-1 overflow-hidden px-2">
         {photos.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
-              <p className="text-gray-500 text-lg">Waiting for photos...</p>
-              <p className="text-gray-600 text-sm mt-2">Photos will appear here as they are taken</p>
+              <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                </svg>
+              </div>
+              <p className="text-white/30 text-lg font-medium">Waiting for photos...</p>
+              <p className="text-white/15 text-sm mt-2">They will appear here in real time</p>
             </div>
           </div>
         ) : (

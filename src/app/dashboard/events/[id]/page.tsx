@@ -216,11 +216,31 @@ export default function EventDetailPage({
           setMessages((prev) => [payload.new as Message, ...prev]);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.log(`[Realtime] Connected to photos-${event.id}`);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [event, supabase]);
+
+  useEffect(() => {
+    if (!event) return;
+
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from("photos")
+        .select("*")
+        .eq("event_id", event.id)
+        .order("uploaded_at", { ascending: false });
+
+      if (data) setPhotos(data);
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [event, supabase]);
 
   const filteredPhotos = useMemo(() => {
