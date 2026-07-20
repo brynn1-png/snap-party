@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase/provider";
 
 export default function NamePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -13,7 +13,7 @@ export default function NamePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const supabase = createClient();
+  const supabase = useSupabase();
 
   useEffect(() => {
     const existingName = localStorage.getItem("current_guest_name");

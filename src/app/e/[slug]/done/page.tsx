@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase/provider";
 import { processQueue, startSyncListener } from "@/lib/syncWorker";
 
 interface Photo {
@@ -22,7 +22,7 @@ export default function DonePage() {
   const [downloading, setDownloading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const supabase = createClient();
+  const supabase = useSupabase();
 
   const refreshPhotos = useCallback(async (sid: string) => {
     const { data: photosData } = await supabase

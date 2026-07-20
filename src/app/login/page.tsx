@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase/provider";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [magicLoading, setMagicLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"password" | "magic">("password");
-  const supabase = createClient();
+  const supabase = useSupabase();
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();

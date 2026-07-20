@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase/provider";
 import imageCompression from "browser-image-compression";
 import { enqueuePhoto, removeQueuedPhoto, getQueueCount } from "@/lib/offlineQueue";
 import { processQueue, startSyncListener } from "@/lib/syncWorker";
@@ -23,7 +23,7 @@ export default function CameraPage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
   const [queuedCount, setQueuedCount] = useState(0);
-  const supabase = createClient();
+  const supabase = useSupabase();
   const shotsUsedRef = useRef(0);
   const guestNameRef = useRef("");
   const photoLimitRef = useRef(15);

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo, use } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase/provider";
+import { Slideshow, Carousel } from "@/components";
 import QRCode from "qrcode";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -214,8 +215,9 @@ export default function EventDetailPage({
   const [deletingEvent, setDeletingEvent] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [galleryFilter, setGalleryFilter] = useState<"all" | "photos">("all");
-  const [galleryView, setGalleryView] = useState<"grid" | "list">("grid");
-  const supabase = createClient();
+  const [galleryView, setGalleryView] = useState<"grid" | "list" | "carousel">("grid");
+  const [slideshowStartIndex, setSlideshowStartIndex] = useState<number | null>(null);
+  const supabase = useSupabase();
   const router = useRouter();
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window?.location?.origin;
@@ -432,6 +434,7 @@ export default function EventDetailPage({
   }
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <div className="relative h-72 sm:h-80 lg:h-96 overflow-hidden">
@@ -595,6 +598,14 @@ export default function EventDetailPage({
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
                       </svg>
                     </button>
+                    <button
+                      onClick={() => setGalleryView("carousel")}
+                      className={`p-1.5 rounded-md transition-colors ${galleryView === "carousel" ? "bg-white shadow-sm text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -631,11 +642,13 @@ export default function EventDetailPage({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {filteredPhotos.map((photo, idx) => (
                     <div key={photo.id} className="group relative rounded-xl overflow-hidden border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
-                      <img
-                        src={photo.image_url}
-                        alt="Event photo"
-                        className="aspect-square w-full object-cover"
-                      />
+                      <div onClick={() => setSlideshowStartIndex(idx)} className="cursor-pointer">
+                        <img
+                          src={photo.image_url}
+                          alt="Event photo"
+                          className="aspect-square w-full object-cover"
+                        />
+                      </div>
                       {idx < 3 && (
                         <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-sp-violet text-[10px] font-bold text-white uppercase tracking-wide">New</span>
                       )}
@@ -664,6 +677,10 @@ export default function EventDetailPage({
                     </div>
                   ))}
                 </div>
+              ) : galleryView === "carousel" ? (
+                <div className="overflow-hidden rounded-xl border border-gray-100">
+                  <Carousel photos={filteredPhotos} />
+                </div>
               ) : (
                 <div className="space-y-2">
                   {filteredPhotos.map((photo) => (
@@ -671,7 +688,8 @@ export default function EventDetailPage({
                       <img
                         src={photo.image_url}
                         alt="Event photo"
-                        className="w-14 h-14 rounded-lg object-cover border border-gray-100"
+                        className="w-14 h-14 rounded-lg object-cover border border-gray-100 cursor-pointer"
+                        onClick={() => setSlideshowStartIndex(photos.indexOf(photo))}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-700 truncate">{photo.guest_name || "Guest"}</p>
@@ -825,5 +843,12 @@ export default function EventDetailPage({
         </div>
       </div>
     </div>
+      {slideshowStartIndex !== null && (
+        <Slideshow
+          photos={photos}
+          onClose={() => setSlideshowStartIndex(null)}
+        />
+      )}
+    </>
   );
 }

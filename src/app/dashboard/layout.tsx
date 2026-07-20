@@ -3,6 +3,8 @@
 import LogoutButton from "./LogoutButton";
 import Link from "next/link";
 
+// graphify: serves /dashboard, /dashboard/create, /dashboard/events/[id]
+
 export default function DashboardLayout({
   children,
 }: {

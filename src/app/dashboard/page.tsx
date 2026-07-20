@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase/provider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
   const fetchedOnce = useRef(false);
-  const supabase = createClient();
+  const supabase = useSupabase();
   const pathname = usePathname();
 
   const fetchEvents = useCallback(async () => {

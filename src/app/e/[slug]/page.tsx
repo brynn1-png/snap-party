@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase/provider";
 
 export default function GuestLandingPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [eventName, setEventName] = useState("");
-  const supabase = createClient();
+  const supabase = useSupabase();
 
   useEffect(() => {
     async function init() {
