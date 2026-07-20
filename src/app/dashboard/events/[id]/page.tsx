@@ -41,14 +41,6 @@ interface Message {
   created_at: string;
 }
 
-interface Activity {
-  id: string;
-  type: "photo" | "scan" | "message";
-  guest_name: string;
-  detail: string;
-  created_at: string;
-}
-
 function UploadsChart({ photos }: { photos: Photo[] }) {
   const [nowMs] = useState(() => Date.now());
   const { chartData, recentCount } = useMemo(() => {
@@ -121,78 +113,6 @@ function UploadsChart({ photos }: { photos: Photo[] }) {
         {["12 AM", "4 AM", "8 AM", "12 PM", "4 PM", "8 PM", "Now"].map((l) => (
           <span key={l}>{l}</span>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function ActivityFeed({ activity }: { activity: Activity[] }) {
-  const [nowMs] = useState(() => Date.now());
-  const iconMap = {
-    photo: (
-      <div className="w-8 h-8 rounded-full bg-sp-coral/10 flex items-center justify-center flex-shrink-0">
-        <svg className="w-4 h-4 text-sp-coral" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v13.5A1.5 1.5 0 003.75 21z" />
-        </svg>
-      </div>
-    ),
-    scan: (
-      <div className="w-8 h-8 rounded-full bg-sp-violet/10 flex items-center justify-center flex-shrink-0">
-        <svg className="w-4 h-4 text-sp-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
-        </svg>
-      </div>
-    ),
-    message: (
-      <div className="w-8 h-8 rounded-full bg-sp-teal/10 flex items-center justify-center flex-shrink-0">
-        <svg className="w-4 h-4 text-sp-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
-        </svg>
-      </div>
-    ),
-  };
-
-  const activityWithTime = useMemo(() => {
-    return activity.map((a) => {
-      const seconds = Math.floor((nowMs - new Date(a.created_at).getTime()) / 1000);
-      let timeStr: string;
-      if (seconds < 60) {
-        timeStr = "just now";
-      } else if (seconds < 3600) {
-        timeStr = `${Math.floor(seconds / 60)}m ago`;
-      } else if (seconds < 86400) {
-        timeStr = `${Math.floor(seconds / 3600)}h ago`;
-      } else {
-        timeStr = `${Math.floor(seconds / 86400)}d ago`;
-      }
-      return { ...a, timeStr };
-    });
-  }, [activity]);
-
-  return (
-    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-sm font-semibold text-gray-900">Recent Activity</h3>
-        <span className="text-xs font-medium text-sp-violet cursor-pointer hover:text-sp-purple transition-colors">View All</span>
-      </div>
-      <div className="space-y-4">
-        {activityWithTime.length === 0 ? (
-          <p className="text-sm text-gray-300 text-center py-4">No activity yet</p>
-        ) : (
-          activityWithTime.map((a) => (
-            <div key={a.id} className="flex items-center gap-3">
-              {iconMap[a.type]}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700">
-                  <span className="font-semibold text-gray-900">{a.guest_name}</span>{" "}
-                  {a.detail}
-                </p>
-                <p className="text-xs text-gray-300 mt-0.5">{a.timeStr}</p>
-              </div>
-            </div>
-          ))
-        )}
       </div>
     </div>
   );
@@ -302,45 +222,6 @@ export default function EventDetailPage({
       supabase.removeChannel(channel);
     };
   }, [event, supabase]);
-
-  const activity = useMemo<Activity[]>(() => {
-    const items: Activity[] = [];
-
-    photos.slice(0, 10).forEach((p) => {
-      items.push({
-        id: `photo-${p.id}`,
-        type: "photo",
-        guest_name: p.guest_name || "Someone",
-        detail: "uploaded a photo",
-        created_at: p.uploaded_at,
-      });
-    });
-
-    sessions.slice(0, 5).forEach((s) => {
-      if (s.guest_name) {
-        items.push({
-          id: `scan-${s.id}`,
-          type: "scan",
-          guest_name: s.guest_name,
-          detail: "scanned the QR code",
-          created_at: s.created_at,
-        });
-      }
-    });
-
-    messages.slice(0, 5).forEach((m) => {
-      items.push({
-        id: `msg-${m.id}`,
-        type: "message",
-        guest_name: m.guest_name,
-        detail: "left a message",
-        created_at: m.created_at,
-      });
-    });
-
-    items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    return items.slice(0, 15);
-  }, [photos, sessions, messages]);
 
   const filteredPhotos = useMemo(() => {
     if (galleryFilter === "photos") return photos;

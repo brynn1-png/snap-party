@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 const floatingPhotos = [
   { src: "https://images.unsplash.com/photo-1519741497674-611481863552?w=400&q=80&fit=crop&auto=format", alt: "Wedding celebration", rotate: "6deg", pos: "top-32 right-[15%]", size: "w-24 h-32", anim: "float-slow", gradient: "from-sp-coral to-sp-orange" },
   { src: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&q=80&fit=crop&auto=format", alt: "Festival crowd", rotate: "-3deg", pos: "top-48 right-[8%]", size: "w-20 h-28", anim: "float-medium", gradient: "from-sp-violet to-sp-purple" },

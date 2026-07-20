@@ -11,6 +11,3 @@ export { default as Footer } from "./Footer";
 export { default as Carousel } from "./Carousel";
 export { default as Slideshow } from "./Slideshow";
 export { default as ScrollReveal } from "./ScrollReveal";
-export { default as PricingPreview } from "./PricingPreview";
-export { default as ProblemSection } from "./ProblemSection";
-export { default as SocialProof } from "./SocialProof";

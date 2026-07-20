@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSupabase } from "@/lib/supabase/provider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,7 +30,6 @@ export default function DashboardPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
-  const fetchedOnce = useRef(false);
   const supabase = useSupabase();
   const pathname = usePathname();
 
@@ -38,9 +37,7 @@ export default function DashboardPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
-      return;
-    }
+    if (!user) return [];
 
     const { data: eventsData } = await supabase
       .from("events")
@@ -48,39 +45,40 @@ export default function DashboardPage() {
       .eq("organizer_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (eventsData) {
-      const eventsWithCounts = await Promise.all(
-        eventsData.map(async (event) => {
-          const [{ count: photoCount }, { count: sessionCount }] =
-            await Promise.all([
-              supabase
-                .from("photos")
-                .select("*", { count: "exact", head: true })
-                .eq("event_id", event.id),
-              supabase
-                .from("sessions")
-                .select("*", { count: "exact", head: true })
-                .eq("event_id", event.id)
-                .not("guest_name", "is", null),
-            ]);
-          return {
-            ...event,
-            photo_count: photoCount || 0,
-            session_count: sessionCount || 0,
-          };
-        })
-      );
-      setEvents(eventsWithCounts);
-    }
-    if (!fetchedOnce.current) {
-      fetchedOnce.current = true;
-      setLoading(false);
-    }
+    if (!eventsData) return [];
+
+    const eventsWithCounts = await Promise.all(
+      eventsData.map(async (event) => {
+        const [{ count: photoCount }, { count: sessionCount }] =
+          await Promise.all([
+            supabase
+              .from("photos")
+              .select("*", { count: "exact", head: true })
+              .eq("event_id", event.id),
+            supabase
+              .from("sessions")
+              .select("*", { count: "exact", head: true })
+              .eq("event_id", event.id)
+              .not("guest_name", "is", null),
+          ]);
+        return {
+          ...event,
+          photo_count: photoCount || 0,
+          session_count: sessionCount || 0,
+        };
+      })
+    );
+    return eventsWithCounts;
   }, [supabase]);
 
   useEffect(() => {
-    fetchEvents();
-    const interval = setInterval(fetchEvents, 3000);
+    fetchEvents().then((data) => {
+      setEvents(data);
+      setLoading(false);
+    });
+    const interval = setInterval(() => {
+      fetchEvents().then(setEvents);
+    }, 3000);
     return () => clearInterval(interval);
   }, [pathname, fetchEvents]);
 

@@ -76,13 +76,13 @@ export default function DonePage() {
 
       // Process any remaining queued photos in the background
       setSyncing(true);
-      await processQueue(async (_status, _synced) => {
+      await processQueue(async () => {
         await refreshPhotos(session.id);
       });
       setSyncing(false);
 
       // Listen for online events to retry failed uploads
-      stopListener = startSyncListener(async (_status, _synced) => {
+      stopListener = startSyncListener(async () => {
         setSyncing(true);
         await refreshPhotos(session.id);
         setSyncing(false);
