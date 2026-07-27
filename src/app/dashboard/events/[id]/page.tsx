@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo, use } from "react";
+import { useEffect, useState, useMemo, useCallback, use } from "react";
 import { useSupabase } from "@/lib/supabase/provider";
 import { Slideshow, Carousel } from "@/components";
+import { generateToken } from "@/lib/generateToken";
 import QRCode from "qrcode";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -137,10 +138,44 @@ export default function EventDetailPage({
   const [galleryFilter, setGalleryFilter] = useState<"all" | "photos">("all");
   const [galleryView, setGalleryView] = useState<"grid" | "list" | "carousel">("grid");
   const [slideshowStartIndex, setSlideshowStartIndex] = useState<number | null>(null);
+  const [regeneratingQr, setRegeneratingQr] = useState(false);
   const supabase = useSupabase();
   const router = useRouter();
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window?.location?.origin;
+
+  const generateQrDataUrl = useCallback(
+    async (slug: string, qrToken: string) => {
+      // The QR image is keyed off qr_token (rotatable) rather than slug
+      // (permanent/readable) so an organizer can invalidate a printed/leaked
+      // QR code without breaking the "Share Event" link, which stays slug-only.
+      const qrUrl = `${baseUrl}/e/${slug}?qr=${qrToken}`;
+      return QRCode.toDataURL(qrUrl, {
+        width: 300,
+        margin: 2,
+        color: { dark: "#000000", light: "#FFFFFF" },
+      });
+    },
+    [baseUrl]
+  );
+
+  async function handleRegenerateQr() {
+    if (!event) return;
+    if (!confirm("Regenerate the QR code? Any previously printed or shared QR code will stop working. The \"Share Event\" link is unaffected.")) return;
+
+    setRegeneratingQr(true);
+    const newToken = generateToken();
+    const { error } = await supabase
+      .from("events")
+      .update({ qr_token: newToken })
+      .eq("id", event.id);
+
+    if (!error) {
+      setEvent({ ...event, qr_token: newToken });
+      setQrDataUrl(await generateQrDataUrl(event.slug, newToken));
+    }
+    setRegeneratingQr(false);
+  }
 
   useEffect(() => {
     async function fetchData() {
@@ -152,14 +187,7 @@ export default function EventDetailPage({
 
       if (eventData) {
         setEvent(eventData);
-
-        const qrUrl = `${baseUrl}/e/${eventData.slug}`;
-        const dataUrl = await QRCode.toDataURL(qrUrl, {
-          width: 300,
-          margin: 2,
-          color: { dark: "#000000", light: "#FFFFFF" },
-        });
-        setQrDataUrl(dataUrl);
+        setQrDataUrl(await generateQrDataUrl(eventData.slug, eventData.qr_token));
 
         const { data: photosData } = await supabase
           .from("photos")
@@ -188,7 +216,7 @@ export default function EventDetailPage({
       setLoading(false);
     }
     fetchData();
-  }, [id, supabase, baseUrl]);
+  }, [id, supabase, baseUrl, generateQrDataUrl]);
 
   useEffect(() => {
     if (!event) return;
@@ -648,6 +676,16 @@ export default function EventDetailPage({
                       </svg>
                     </button>
                   </div>
+                  <button
+                    onClick={handleRegenerateQr}
+                    disabled={regeneratingQr}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-white/40 hover:text-white/70 transition-colors disabled:opacity-50"
+                  >
+                    <svg className={`w-3.5 h-3.5 ${regeneratingQr ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                    </svg>
+                    {regeneratingQr ? "Regenerating..." : "Regenerate QR"}
+                  </button>
                 </>
               ) : (
                 <div className="flex items-center justify-center gap-2 text-white/25 py-8">

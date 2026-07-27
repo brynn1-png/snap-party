@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./Providers";
 import "./globals.css";
@@ -17,6 +17,16 @@ export const metadata: Metadata = {
   title: "SnapParty — Every Memory. Instantly Shared.",
   description:
     "The easiest way to collect event photos. Guests scan a QR, take photos in their browser, and photos land live on your dashboard. No app. No login.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Guests run the camera page full-bleed edge-to-edge on notched phones;
+  // "cover" lets content draw under the notch/home-indicator so we can pad
+  // it back out deliberately with env(safe-area-inset-*) instead of the
+  // browser silently letterboxing it.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

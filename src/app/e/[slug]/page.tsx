@@ -7,7 +7,7 @@ import { useSupabase } from "@/lib/supabase/provider";
 export default function GuestLandingPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "error" | "invalid-qr">("loading");
   const [eventName, setEventName] = useState("");
   const supabase = useSupabase();
 
@@ -15,13 +15,23 @@ export default function GuestLandingPage() {
     async function init() {
       const { data: event, error } = await supabase
         .from("events")
-        .select("id, name, photo_limit")
+        .select("id, name, photo_limit, qr_token")
         .eq("slug", slug)
         .single();
 
       if (error || !event) {
         console.error("Event lookup failed:", error);
         setStatus("error");
+        return;
+      }
+
+      // A `qr` param means this visit came from a scanned QR code rather
+      // than the plain shareable link — validate it against the event's
+      // current qr_token so a regenerated/rotated QR invalidates old prints
+      // without touching the slug-based share link (which omits `qr`).
+      const scannedToken = new URLSearchParams(window.location.search).get("qr");
+      if (scannedToken && scannedToken !== event.qr_token) {
+        setStatus("invalid-qr");
         return;
       }
 
@@ -95,6 +105,21 @@ export default function GuestLandingPage() {
         <div className="rounded-2xl bg-sp-coral/10 border border-sp-coral/20 p-8 text-center">
           <p className="text-xl font-semibold text-sp-coral">
             Event not found
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "invalid-qr") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-sp-midnight px-4">
+        <div className="rounded-2xl bg-sp-coral/10 border border-sp-coral/20 p-8 text-center max-w-sm">
+          <p className="text-xl font-semibold text-sp-coral mb-2">
+            This QR code is no longer valid
+          </p>
+          <p className="text-sm text-sp-coral/70">
+            The organizer generated a new QR code for this event. Ask them for the updated one.
           </p>
         </div>
       </div>

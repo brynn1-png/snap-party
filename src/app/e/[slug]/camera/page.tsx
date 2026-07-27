@@ -441,7 +441,7 @@ export default function CameraPage() {
       `}</style>
 
       {/* Top bar */}
-      <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/80 via-black/60 to-transparent px-5 pt-5 pb-8">
+      <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/80 via-black/60 to-transparent px-5 pb-8 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
         <div className="flex items-center gap-2">
           {/* Shot counter */}
           <div className="inline-flex items-center gap-1.5 rounded-full bg-sp-success/10 px-3.5 py-1.5 border border-sp-success/20">
@@ -486,7 +486,7 @@ export default function CameraPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col items-center px-6 pb-10">
+      <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col items-center px-6 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]">
         {/* Capture button */}
         <div className="relative mb-4">
           {/* Soft ambient glow */}
