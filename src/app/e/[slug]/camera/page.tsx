@@ -239,8 +239,16 @@ export default function CameraPage() {
           if (result.shotsUsed >= photoLimit) {
             router.push(`/e/${slug}/done`);
           }
+        } else if (res.status === 403 || res.status === 404) {
+          // Server-side rejection (limit reached / event gone) can never
+          // succeed on retry — drop it instead of leaving it queued forever.
+          try { await removeQueuedPhoto(photoId); } catch {}
+          setQueuedCount((prev) => Math.max(0, prev - 1));
+          if (res.status === 403) {
+            router.push(`/e/${slug}/done`);
+          }
         }
-        // Upload failed — stays in queue, will retry later
+        // Otherwise (network/server error) — stays in queue, will retry later
       } catch {
         // Fetch failed — stays in queue, will retry later
       }

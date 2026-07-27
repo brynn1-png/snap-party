@@ -45,7 +45,7 @@ export default function Carousel({ photos, fullScreen = false }: CarouselProps) 
   const cardSize = fullScreen ? "min(70vh, 550px)" : "300px";
 
   return (
-    <div className={`relative overflow-hidden ${fullScreen ? "h-full" : "mb-8 rounded-2xl bg-white border border-gray-100 shadow-sm"}`}>
+    <div className={`relative overflow-hidden ${fullScreen ? "h-full" : "mb-8 rounded-2xl bg-white/[0.03] border border-white/10"}`}>
       <div className={fullScreen ? "h-full flex items-center" : "py-4"}>
         <div ref={trackRef} className={`flex items-center ${fullScreen ? "gap-8 px-8" : "gap-4 px-4"}`}>
           {doubled.map((photo, i) => (
@@ -54,7 +54,7 @@ export default function Carousel({ photos, fullScreen = false }: CarouselProps) 
               className={`group relative flex-shrink-0 overflow-hidden transition-shadow duration-500 ${
                 fullScreen
                   ? "rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.4)] hover:shadow-[0_0_60px_rgba(139,92,246,0.15)] animate-carousel-in"
-                  : "rounded-xl border border-gray-100"
+                  : "rounded-xl border border-white/10"
               }`}
               style={{ width: cardSize, height: cardSize }}
             >
@@ -77,7 +77,7 @@ export default function Carousel({ photos, fullScreen = false }: CarouselProps) 
       </div>
 
       {!fullScreen && (
-        <div className="absolute bottom-4 right-4 px-3 py-1 rounded-full bg-white border border-gray-100 shadow-sm text-xs font-medium text-gray-500">
+        <div className="absolute bottom-4 right-4 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-xs font-medium text-white/70">
           {photos.length} photos
         </div>
       )}

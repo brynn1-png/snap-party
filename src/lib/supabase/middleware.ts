@@ -30,12 +30,15 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isDashboard = request.nextUrl.pathname.startsWith("/dashboard");
-  const isLive = request.nextUrl.pathname.startsWith("/live");
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup");
 
-  if ((isDashboard || isLive) && !user) {
+  // /live/[slug] is meant to be opened on a venue TV/projector, which never
+  // has an organizer session — it must stay public, same trust model as the
+  // guest flow (/e/[slug]): the slug itself is the only access control,
+  // matching the fully-open RLS select policies on events/photos.
+  if (isDashboard && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

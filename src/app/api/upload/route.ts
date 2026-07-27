@@ -21,6 +21,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { data: event } = await supabase
+      .from("events")
+      .select("photo_limit")
+      .eq("id", eventId)
+      .single();
+
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    // Atomically reserves a shot slot and enforces photo_limit server-side —
+    // the client-side counter is only a UI convenience and cannot be trusted.
+    const { data: newShotsUsed, error: incrementError } = await supabase.rpc(
+      "increment_session_shots",
+      { p_session_id: sessionId, p_limit: event.photo_limit }
+    );
+
+    if (incrementError) {
+      return NextResponse.json({ error: incrementError.message }, { status: 500 });
+    }
+
+    if (newShotsUsed === null) {
+      return NextResponse.json({ error: "Shot limit reached" }, { status: 403 });
+    }
+
     const ext = file.type === "image/webp" ? "webp" : "jpg";
     const contentType = file.type === "image/webp" ? "image/webp" : "image/jpeg";
     const filePath = `events/${eventId}/${sessionId}/${Date.now()}.${ext}`;
@@ -55,19 +80,6 @@ export async function POST(request: NextRequest) {
     if (dbError) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
-
-    const { data: session } = await supabase
-      .from("sessions")
-      .select("shots_used")
-      .eq("id", sessionId)
-      .single();
-
-    const newShotsUsed = (session?.shots_used ?? 0) + 1;
-
-    await supabase
-      .from("sessions")
-      .update({ shots_used: newShotsUsed })
-      .eq("id", sessionId);
 
     return NextResponse.json({
       success: true,

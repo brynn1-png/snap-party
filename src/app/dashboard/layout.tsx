@@ -11,11 +11,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
+    <div className="flex min-h-screen flex-col bg-sp-midnight">
+      <nav className="sticky top-0 z-50 bg-sp-midnight/80 backdrop-blur-xl border-b border-white/10">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
           <Link href="/dashboard" className="flex items-center gap-1">
-            <span className="text-xl font-bold tracking-tight text-gray-900">Snap</span>
+            <span className="text-xl font-bold tracking-tight text-white">Snap</span>
             <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-sp-coral to-sp-magenta bg-clip-text text-transparent">Party</span>
           </Link>
           <div className="flex items-center gap-3">

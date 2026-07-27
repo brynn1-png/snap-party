@@ -1,6 +1,8 @@
 import { getQueuedPhotos, removeQueuedPhoto, type QueuedPhoto } from "./offlineQueue";
 
-async function uploadPhoto(photo: QueuedPhoto): Promise<boolean> {
+type UploadResult = "success" | "retry" | "rejected";
+
+async function uploadPhoto(photo: QueuedPhoto): Promise<UploadResult> {
   const formData = new FormData();
   formData.append("file", photo.blob, "photo.webp");
   formData.append("eventId", photo.eventId);
@@ -12,9 +14,13 @@ async function uploadPhoto(photo: QueuedPhoto): Promise<boolean> {
       method: "POST",
       body: formData,
     });
-    return res.ok;
+    if (res.ok) return "success";
+    // 403 (shot limit reached) or 404 (event/session gone) can never succeed
+    // on retry — drop them instead of looping forever on every reconnect.
+    if (res.status === 403 || res.status === 404) return "rejected";
+    return "retry";
   } catch {
-    return false;
+    return "retry";
   }
 }
 
@@ -35,10 +41,12 @@ export async function processQueue(onStatus?: SyncCallback): Promise<void> {
   let failed = 0;
 
   for (const photo of queue) {
-    const success = await uploadPhoto(photo);
-    if (success) {
+    const result = await uploadPhoto(photo);
+    if (result === "success") {
       await removeQueuedPhoto(photo.id);
       synced++;
+    } else if (result === "rejected") {
+      await removeQueuedPhoto(photo.id);
     } else {
       failed++;
     }

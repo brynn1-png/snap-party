@@ -162,6 +162,21 @@ h1, h2, h3, h4, h5, h6 {
 .scroll-reveal-delay-3 { transition-delay: 0.3s; }
 .scroll-reveal-delay-4 { transition-delay: 0.4s; }
 
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-transition {
+  animation: pageIn 0.35s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none;
+  }
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
