@@ -5,7 +5,7 @@ created: 2026-07-27
 
 # Live Slideshow
 
-Part of [[SnapParty]]. Ambient display route at `/live/[slug]` intended for a TV or projector at the event venue. **Correction:** despite the page itself doing an open, unauthenticated Supabase read, `src/proxy.ts` gates the entire `/live/**` path behind organizer login (same as `/dashboard/**`) — so in practice a TV/projector browser must be logged in as the organizer to view it. This is worth a product decision: either this is intentional (Pro-tier gating) or it's a gap against the "Live Memory Wall" vision of anyone at the venue viewing it screen. See [[Known Issues]].
+Part of [[SnapParty]]. Ambient display route at `/live/[slug]` intended for a TV or projector at the event venue — genuinely public, no organizer login required. (It briefly wasn't: `src/proxy.ts` used to gate `/live/**` behind organizer auth same as `/dashboard/**`, which meant a TV/projector browser with no session would just bounce to `/login`, silently breaking the event page's "Project" button. Fixed by removing `/live` from the auth gate — see [[Known Issues]].)
 
 Listed as a Phase 2 "Live Memory Wall" / "Live Slideshow" differentiator in [[Vision & Positioning]] and [[Roadmap]]; implementation already exists ahead of the documented roadmap status.
 

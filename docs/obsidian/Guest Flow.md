@@ -25,6 +25,10 @@ Capture → client-side compression → auto-upload (no submit button, repeats u
 /e/[slug]/done — thank-you / completion screen
 ```
 
+## QR token validation (`/e/[slug]/page.tsx`)
+
+If the URL has a `?qr=` param (meaning the guest scanned a physical QR code rather than following the plain shareable link), it's checked against `events.qr_token`. A mismatch — because the organizer hit "Regenerate QR" (see [[Organizer Flow]]) — shows a distinct "This QR code is no longer valid" state instead of the generic "Event not found." No `qr` param at all (the slug-only share link) always works regardless of rotation. See [[Events Table]].
+
 ## Session resume logic (`/e/[slug]/page.tsx`)
 
 On load, checks `localStorage` for an existing `session_{event.id}` token:
@@ -42,6 +46,7 @@ This means a guest can close the browser mid-event and resume exactly where they
 - Client-side compression: WebP, capped at 1280px, quality 0.82, target ≤0.3MB (~70% storage savings vs. uncompressed) — via `browser-image-compression`
 - If offline: photo is compressed and pushed into the [[Offline Queue]] instead of uploading directly
 - Capture animation: white flash + photo flies to a corner "queue" indicator
+- Mobile-first safe-area handling: top/bottom control bars pad themselves with `env(safe-area-inset-top/bottom)` (on top of base padding) so they clear the notch/Dynamic Island and home-indicator gesture area on notched phones — requires `viewport-fit: cover` set in `layout.tsx`, see [[Architecture]]
 
 Data lands in [[Sessions Table]] (`shots_used` incremented) and [[Photos Table]] (new row), which the organizer sees live — see [[Organizer Flow]].
 

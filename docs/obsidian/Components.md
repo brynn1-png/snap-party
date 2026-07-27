@@ -11,7 +11,7 @@ Part of [[SnapParty]]. Shared React components live in `src/components/`, barrel
 
 Composed on `src/app/page.tsx` in order:
 
-- `Navbar` — top nav with Admin Login link
+- `Navbar` — top nav with Admin Login link; hamburger menu below `md` reveals How It Works/Features/Pricing/Admin Login (previously unreachable on mobile — those links were `hidden md:flex` with no fallback)
 - `Hero` — "Snap. Done." hero section with CTAs
 - `TrustedBy` — social proof strip
 - `HowItWorks` — 3-step cards (Scan → Shoot → Done), see [[Guest Flow]]
@@ -30,4 +30,4 @@ Composed on `src/app/page.tsx` in order:
 
 ## Design system
 
-All components follow the **Neobrutalism** design language (thick borders, hard drop shadows, saturated colors) defined via tokens in `src/app/globals.css` — except [[Live Slideshow]], which intentionally breaks from it with a dark glassy ambient look suited to being viewed on a TV/projector.
+Dark gradient glassmorphism throughout — see [[Architecture]]. `Carousel`'s non-fullscreen mode (used only by the dashboard's carousel gallery view) was still hardcoded to a light `bg-white` card until 2026-07-27; it now matches the same glass-card tokens as everything else.

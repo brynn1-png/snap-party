@@ -20,6 +20,15 @@ Goal: prove "scan → shoot → auto-upload → organizer sees it" end to end.
 - [ ] Event link sharing (not just QR)
 - [ ] Photo preview before upload (retake option)
 
+## Hardening pass (2026-07-27, this session)
+
+Not roadmap features so much as making existing Phase 1 features actually behave as designed — see [[Known Issues]] for full detail:
+- Server-side shot-limit enforcement + atomic increment (was client-trust only)
+- `/api/upload-cover` authorization (was wide open)
+- `qr_token` actually wired up (QR image + "Regenerate QR", previously dead data — slight progress against the Phase 1 "Event link sharing (not just QR)" polish item below, though that item was really about the already-existing "Share Event" copy-link button)
+- Logout destination and `/live/[slug]` public-access bugs (see [[Known Issues]])
+- Dashboard restyled to match the guest-side dark theme; mobile-first pass on the camera page and marketing `Navbar`
+
 ## Interim build (2026-07-13, `PLAN-guest-name-flow.md`) — ahead of the Phase 2 list below
 
 Three features built between the PROGRESS.md snapshot and now, all already implemented in source:

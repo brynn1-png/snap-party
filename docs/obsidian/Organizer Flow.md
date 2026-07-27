@@ -17,7 +17,8 @@ Part of [[SnapParty]]. Organizers are the only authenticated users in the system
 /dashboard/create — new event form (name, photo limit)
     ↓
 /dashboard/events/[id] — event detail:
-    • QR code (generated client-side via `qrcode`, encodes qr_token)
+    • QR code (generated client-side via `qrcode`, encodes `slug` + `qr_token` as `?qr=` param)
+    • "Regenerate QR" — assigns a new `qr_token`; old printed/shared QR codes stop working, "Share Event" link (slug-only, no `qr` param) is unaffected — see [[Events Table]]
     • Live gallery, updated in real time via Supabase Realtime
     • Uploads-over-time chart (`UploadsChart`, 24h bucketed)
     • Guest sessions list (name, shots used)

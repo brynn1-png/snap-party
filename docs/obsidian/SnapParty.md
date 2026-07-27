@@ -33,5 +33,5 @@ The long-term ambition is not to be a gallery uploader but an **Interactive Even
 
 - **Repo:** `C:\Users\bryan\github\snap\snap-party`
 - **Stack:** Next.js 16 (App Router) · React 19 · Tailwind CSS v4 · Supabase (Postgres + Storage + Auth + Realtime)
-- **Design system:** Neobrutalism (thick borders, hard shadows, saturated colors)
-- **Status (as of 2026-07-05):** Phase 1 MVP core complete, in polish; guest-name flow / slideshow / offline queue built 2026-07-13 (see [[Roadmap]])
+- **Design system:** dark gradient glassmorphism (`sp-midnight` background, translucent `bg-white/[0.03]` cards, blurred coral/violet/magenta glow orbs) — unified across marketing, guest, auth, and dashboard as of 2026-07-27. `PROGRESS.md`'s "Neobrutalism" description is stale and doesn't match current source.
+- **Status (as of 2026-07-27):** Phase 1 MVP complete and hardened (server-side shot-limit enforcement, QR-token rotation, mobile-first guest flow); guest-name flow / slideshow / offline queue built 2026-07-13; dashboard restyled to match the guest-side dark theme and mobile-audited 2026-07-27 (see [[Roadmap]], [[Known Issues]])

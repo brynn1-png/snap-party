@@ -63,4 +63,8 @@ If the guest is offline, capture is diverted into the [[Offline Queue]] instead 
 
 ## Design system
 
-Neobrutalism: thick borders, hard drop shadows, saturated colors. Tokens live in `src/app/globals.css`. The public-facing `/live/[slug]` page instead uses a dark, glassy "ambient" aesthetic distinct from the neobrutalist marketing/dashboard UI.
+Dark gradient glassmorphism, unified across the whole app as of 2026-07-27: `sp-midnight` background, translucent `bg-white/[0.03] border-white/10` glass cards, blurred `sp-coral`/`sp-violet`/`sp-magenta` glow orbs, gradient text on brand/CTAs. Tokens live in `src/app/globals.css`. The dashboard was the last holdout on a light "clean SaaS" look (white cards, `gray-50` background) and was restyled to match this session — see [[Known Issues]]. (`PROGRESS.md`'s "Neobrutalism" description no longer matches the source.)
+
+## Mobile / viewport
+
+`layout.tsx` sets `viewport-fit: cover` so full-bleed screens (the camera page) can draw under the notch/home-indicator on notched phones; `/e/[slug]/camera`'s top and bottom bars pad themselves with `env(safe-area-inset-top/bottom)` on top of their base padding so controls clear those cutouts. The marketing `Navbar` has a hamburger menu below `md` — the nav links were previously `hidden md:flex` with no mobile fallback at all.
