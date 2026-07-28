@@ -1,6 +1,6 @@
 # SnapParty — Progress Tracker
 
-**Last updated:** July 5, 2026
+**Last updated:** July 28, 2026
 
 ---
 
@@ -26,22 +26,27 @@
 
 #### Organizer Dashboard
 - [x] Event list — shows all events with guest/photo counts
-- [x] Event creation form — name + photo limit
+- [x] Event creation form — name + cover photo
 - [x] Event detail page — QR code, stats, live gallery
-- [x] Live gallery — real-time via Supabase Realtime
+- [x] Live gallery — real-time via Supabase Realtime, grid + carousel views, all/photos filter tabs
 - [x] Delete/moderate photos — hover to reveal delete button
 - [x] Bulk ZIP download — jszip + file-saver
 - [x] Basic stats — guest count, photo count, shots per guest
+- [x] Event link sharing — copy-link button (in addition to QR)
+- [x] Live Slideshow — continuous auto-rotating display (`/live/[slug]`, TV/projector-friendly)
+- [x] Guestbook messages — guest-submitted messages shown alongside gallery, real-time
 
 #### Guest Experience
 - [x] Landing page `/e/[slug]` — event lookup + session creation
+- [x] Guest name step `/e/[slug]/name` — collected before camera, stamped onto photos (bottom-left)
 - [x] Camera interface — full-screen, front/rear toggle
-- [x] Shot counter — tracks used vs limit
+- [x] Shot counter — tracks used vs limit (fixed at 15)
 - [x] Auto-upload — capture → compress → upload (no submit button)
 - [x] Client-side compression — WebP, 1280px, 0.82 quality
 - [x] Background uploads — no blocking modal, queue indicator
+- [x] Offline queue — IndexedDB queue + background sync worker, retries on reconnect
 - [x] Capture animation — white flash + photo fly to corner
-- [x] Thank-you / completion screen
+- [x] Thank-you / completion screen — includes "leave a message" guestbook form
 
 #### Upload Pipeline
 - [x] Server-side upload API route (`/api/upload`) — uses service role key
@@ -60,20 +65,18 @@
 
 ## What's Left (Phase 1 polish)
 
-- [ ] Search/filter photos in gallery
+- [ ] Real text/name search over gallery (only an all/photos filter tab exists today, not a search box)
 - [ ] Detailed event analytics (peak upload times, storage used)
-- [ ] Upload retry on network failure
-- [ ] Event link sharing (not just QR)
 - [ ] Photo preview before upload (retake option)
 
 ---
 
-## Phase 2 (Not started)
+## Phase 2
 
-- [ ] Live Slideshow (TV/projector display)
-- [ ] Event Branding / Photo Frames
-- [ ] Digital Guestbook (photo + message)
-- [ ] Improved real-time dashboard (activity feed, live counts)
+- [x] Live Slideshow (TV/projector display)
+- [x] Digital Guestbook (message, not tied to a specific photo)
+- [ ] Event Branding / Photo Frames (event cover photo exists, but no overlay/frame applied to guest photos pre-upload)
+- [ ] Improved real-time dashboard (activity feed, live counts) — live gallery updates in real time, but no dedicated activity feed
 
 ---
 
@@ -116,6 +119,8 @@ snap-party/
 │   ├── app/
 │   │   ├── page.tsx                    # Landing page
 │   │   ├── layout.tsx                  # Root layout
+│   │   ├── template.tsx                # Route transition wrapper
+│   │   ├── Providers.tsx               # Client-side providers
 │   │   ├── globals.css                 # Neobrutalism design tokens
 │   │   ├── login/page.tsx              # Login (email/password + magic link)
 │   │   ├── signup/page.tsx             # Account creation
@@ -123,25 +128,39 @@ snap-party/
 │   │   │   ├── page.tsx                # Event list
 │   │   │   ├── layout.tsx              # Dashboard layout with logout
 │   │   │   ├── LogoutButton.tsx        # Client logout component
-│   │   │   ├── create/page.tsx         # Create event form
-│   │   │   └── events/[id]/page.tsx    # Event detail + gallery
+│   │   │   ├── create/page.tsx         # Create event form (+ cover photo)
+│   │   │   └── events/[id]/page.tsx    # Event detail + gallery + slideshow launch + messages
 │   │   ├── e/[slug]/
 │   │   │   ├── page.tsx                # Guest landing
-│   │   │   ├── camera/page.tsx         # Camera interface
-│   │   │   └── done/page.tsx           # Completion screen
-│   │   └── api/upload/route.ts         # Server-side upload endpoint
+│   │   │   ├── name/page.tsx           # Guest name capture (stamped on photos)
+│   │   │   ├── camera/page.tsx         # Camera interface + offline queue
+│   │   │   └── done/page.tsx           # Completion screen + guestbook message form
+│   │   ├── live/[slug]/page.tsx        # Public live slideshow (TV/projector)
+│   │   └── api/
+│   │       ├── upload/route.ts         # Server-side photo upload endpoint
+│   │       └── upload-cover/route.ts   # Server-side event cover photo upload
 │   ├── components/
 │   │   ├── Navbar.tsx
 │   │   ├── Hero.tsx
 │   │   ├── HowItWorks.tsx
 │   │   ├── Features.tsx
 │   │   ├── CtaBanner.tsx
-│   │   └── Footer.tsx
+│   │   ├── Footer.tsx
+│   │   ├── Slideshow.tsx               # Auto-rotating real-time photo display
+│   │   ├── Carousel.tsx                # Gallery carousel view
+│   │   ├── MobileShowcase.tsx
+│   │   ├── LiveEventExperience.tsx
+│   │   ├── TrustedBy.tsx
+│   │   └── ScrollReveal.tsx
 │   ├── lib/
+│   │   ├── offlineQueue.ts             # IndexedDB pending-upload queue
+│   │   ├── syncWorker.ts               # Background sync/retry on reconnect
+│   │   ├── generateToken.ts            # QR/session token generation
 │   │   └── supabase/
 │   │       ├── client.ts               # Browser client
 │   │       ├── server.ts               # Server client
-│   │       └── middleware.ts            # Session refresh logic
+│   │       ├── provider.tsx            # Supabase context provider
+│   │       └── middleware.ts           # Session refresh logic
 │   └── proxy.ts                        # Next.js 16 proxy (was middleware)
 ├── supabase/
 │   └── schema.sql                      # Database schema + RLS policies
@@ -155,5 +174,5 @@ snap-party/
 
 1. Run `supabase/schema.sql` in SQL Editor
 2. Create Storage bucket named `photos` (public)
-3. Enable Realtime on `photos` table (Database → Replication)
+3. Enable Realtime on `photos` and `messages` tables (Database → Replication)
 4. Add redirect URL in Auth settings: `http://localhost:3000/dashboard`

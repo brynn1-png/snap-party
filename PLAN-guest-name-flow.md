@@ -1,7 +1,7 @@
 # Plan: SnapParty Updates
 
 **Date:** July 13, 2026
-**Status:** In Progress
+**Status:** Completed (all three parts shipped — see [`PROGRESS.md`](./PROGRESS.md) for current state, last verified July 28, 2026)
 
 ---
 
