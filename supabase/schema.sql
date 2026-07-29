@@ -36,6 +36,7 @@ create table if not exists photos (
   image_url text not null,
   file_size int,
   guest_name text,
+  status text not null default 'approved',
   uploaded_at timestamptz not null default now()
 );
 
@@ -57,6 +58,7 @@ create index if not exists sessions_event_id on sessions(event_id);
 create index if not exists sessions_session_token on sessions(session_token);
 create index if not exists photos_event_id on photos(event_id);
 create index if not exists photos_session_id on photos(session_id);
+create index if not exists photos_status on photos(status);
 create index if not exists messages_event_id on messages(event_id);
 create index if not exists messages_session_id on messages(session_id);
 

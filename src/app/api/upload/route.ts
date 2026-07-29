@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
     const eventId = formData.get("eventId") as string;
     const sessionId = formData.get("sessionId") as string;
     const guestName = formData.get("guestName") as string || null;
+    const retaken = (formData.get("retaken") as string) === "true";
 
     if (!file || !eventId || !sessionId) {
       return NextResponse.json(
@@ -31,24 +32,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // Atomically reserves a shot slot and enforces photo_limit server-side —
-    // the client-side counter is only a UI convenience and cannot be trusted.
-    const { data: newShotsUsed, error: incrementError } = await supabase.rpc(
-      "increment_session_shots",
-      { p_session_id: sessionId, p_limit: event.photo_limit }
-    );
+    // Retaken shots don't consume a slot — the guest rejected them, they're
+    // kept only as recoverable outtakes — so skip the shot-limit reservation.
+    let newShotsUsed: number | null = null;
+    if (!retaken) {
+      // Atomically reserves a shot slot and enforces photo_limit server-side —
+      // the client-side counter is only a UI convenience and cannot be trusted.
+      const { data, error: incrementError } = await supabase.rpc(
+        "increment_session_shots",
+        { p_session_id: sessionId, p_limit: event.photo_limit }
+      );
 
-    if (incrementError) {
-      return NextResponse.json({ error: incrementError.message }, { status: 500 });
-    }
+      if (incrementError) {
+        return NextResponse.json({ error: incrementError.message }, { status: 500 });
+      }
 
-    if (newShotsUsed === null) {
-      return NextResponse.json({ error: "Shot limit reached" }, { status: 403 });
+      if (data === null) {
+        return NextResponse.json({ error: "Shot limit reached" }, { status: 403 });
+      }
+
+      newShotsUsed = data;
     }
 
     const ext = file.type === "image/webp" ? "webp" : "jpg";
     const contentType = file.type === "image/webp" ? "image/webp" : "image/jpeg";
-    const filePath = `events/${eventId}/${sessionId}/${Date.now()}.${ext}`;
+    const filePath = retaken
+      ? `events/${eventId}/${sessionId}/retaken/${Date.now()}.${ext}`
+      : `events/${eventId}/${sessionId}/${Date.now()}.${ext}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -75,6 +85,7 @@ export async function POST(request: NextRequest) {
       image_url: urlData.publicUrl,
       file_size: file.size,
       guest_name: guestName,
+      status: retaken ? "retaken" : "approved",
     });
 
     if (dbError) {

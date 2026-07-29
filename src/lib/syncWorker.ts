@@ -8,6 +8,7 @@ async function uploadPhoto(photo: QueuedPhoto): Promise<UploadResult> {
   formData.append("eventId", photo.eventId);
   formData.append("sessionId", photo.sessionId);
   formData.append("guestName", photo.guestName);
+  formData.append("retaken", String(photo.retaken ?? false));
 
   try {
     const res = await fetch("/api/upload", {
@@ -44,11 +45,13 @@ export async function processQueue(onStatus?: SyncCallback): Promise<void> {
     const result = await uploadPhoto(photo);
     if (result === "success") {
       await removeQueuedPhoto(photo.id);
-      synced++;
+      // Retaken shots were never counted into queuedCount on the camera page
+      // (they don't occupy a shot slot), so they must not decrement it here either.
+      if (!photo.retaken) synced++;
     } else if (result === "rejected") {
       await removeQueuedPhoto(photo.id);
     } else {
-      failed++;
+      if (!photo.retaken) failed++;
     }
     onStatus?.("syncing", synced, failed);
   }

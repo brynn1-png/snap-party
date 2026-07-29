@@ -9,6 +9,7 @@ export interface QueuedPhoto {
   sessionId: string;
   guestName: string;
   timestamp: number;
+  retaken?: boolean;
 }
 
 function openDB(): Promise<IDBDatabase> {

@@ -18,7 +18,7 @@ Goal: prove "scan → shoot → auto-upload → organizer sees it" end to end.
 - [ ] Detailed event analytics (peak upload times, storage used)
 - [ ] Upload retry on network failure (partially covered by [[Offline Queue]], built after this list was written)
 - [ ] Event link sharing (not just QR)
-- [ ] Photo preview before upload (retake option)
+- [x] Photo preview before upload (retake option) — *shipped 2026-07-29, scoped to the final shot only rather than every shot, see [[Guest Flow]]*
 
 ## Hardening pass (2026-07-27, this session)
 
@@ -28,6 +28,10 @@ Not roadmap features so much as making existing Phase 1 features actually behave
 - `qr_token` actually wired up (QR image + "Regenerate QR", previously dead data — slight progress against the Phase 1 "Event link sharing (not just QR)" polish item below, though that item was really about the already-existing "Share Event" copy-link button)
 - Logout destination and `/live/[slug]` public-access bugs (see [[Known Issues]])
 - Dashboard restyled to match the guest-side dark theme; mobile-first pass on the camera page and marketing `Navbar`
+
+## Final-shot review (2026-07-29)
+
+Scoped down from an earlier proposal to gate *every* shot behind an approve/retake modal — that would have doubled the required taps per session and killed rapid-fire capture, directly against the "shutter = upload" principle in [[Vision & Positioning]]. Landed instead on gating only the shot that would consume the guest's last slot, since that's the only one that's actually unrecoverable once the session ends. See [[Guest Flow]] for the mechanism and [[Photos Table]]/[[Organizer Flow]] for where rejected ("retaken") shots end up.
 
 ## Interim build (2026-07-13, `PLAN-guest-name-flow.md`) — ahead of the Phase 2 list below
 

@@ -24,8 +24,9 @@ Part of [[SnapParty]]. Organizers are the only authenticated users in the system
     • Guest sessions list (name, shots used)
     • Guestbook messages (see [[Messages Table]])
     • Delete/moderate photos (hover to reveal delete button)
-    • Bulk ZIP download (jszip + file-saver)
+    • Bulk ZIP download (jszip + file-saver) — approved photos only
     • [[Live Slideshow]] launch/toggle
+    • Outtakes tab — shots guests rejected via [[Guest Flow|final-shot review]] (`status = 'retaken'`), separate from the default All/Photos tabs and excluded from ZIP/slideshow
 ```
 
 Route protection: `/dashboard/**` redirects unauthenticated visitors to `/login`, enforced in `src/proxy.ts` (Next.js 16's replacement for `middleware.ts`) using the session-refresh logic in `src/lib/supabase/middleware.ts`.

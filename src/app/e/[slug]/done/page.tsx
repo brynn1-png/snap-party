@@ -29,6 +29,7 @@ export default function DonePage() {
       .from("photos")
       .select("id, image_url, uploaded_at")
       .eq("session_id", sid)
+      .eq("status", "approved")
       .order("uploaded_at", { ascending: true });
 
     if (photosData) setPhotos(photosData);

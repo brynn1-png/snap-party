@@ -6,6 +6,7 @@ import { useSupabase } from "@/lib/supabase/provider";
 import imageCompression from "browser-image-compression";
 import { enqueuePhoto, removeQueuedPhoto, getQueueCount } from "@/lib/offlineQueue";
 import { processQueue, startSyncListener } from "@/lib/syncWorker";
+import ShotReviewModal from "@/components/ShotReviewModal";
 
 export default function CameraPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -23,6 +24,10 @@ export default function CameraPage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
   const [queuedCount, setQueuedCount] = useState(0);
+  const [reviewFile, setReviewFile] = useState<File | null>(null);
+  const [reviewPreviewUrl, setReviewPreviewUrl] = useState<string | null>(null);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const supabase = useSupabase();
   const shotsUsedRef = useRef(0);
   const guestNameRef = useRef("");
@@ -44,7 +49,16 @@ export default function CameraPage() {
         await videoRef.current.play();
       }
       setReady(true);
-    } catch {
+    } catch (err) {
+      // A pending video.play() gets aborted whenever the stream is replaced
+      // or the <video> element unmounts mid-load (e.g. Next.js Fast Refresh
+      // remounting the page during dev, or a rapid double-tap on flip). That's
+      // not a real permission failure, so don't show the "access denied" UI for it.
+      if (err instanceof Error && err.name === "AbortError") {
+        console.warn("[camera] play() aborted (stream replaced/unmounted):", err);
+        return;
+      }
+      console.error("[camera] getUserMedia failed:", err);
       setError("Camera access denied. Please allow camera permissions.");
     }
   }, []);
@@ -197,7 +211,36 @@ export default function CameraPage() {
     ctx.fillText(`📸 ${name}`, x, y);
   }
 
-  async function uploadInBackground(compressedFile: File, eventId: string, sessionId: string, guestName: string) {
+  // Resolves the current guest session + event, verifying they still match.
+  // Shared by capture() (non-final shots) and the review-modal handlers.
+  async function resolveSessionAndEvent(): Promise<{ sessionId: string; eventId: string; guestName: string } | null> {
+    const sessionToken = localStorage.getItem("current_session_token");
+    const guestName = localStorage.getItem("current_guest_name") || "";
+    if (!sessionToken) return null;
+
+    const { data: session } = await supabase
+      .from("sessions")
+      .select("id, event_id")
+      .eq("session_token", sessionToken)
+      .single();
+
+    if (!session) return null;
+
+    const { data: eventData } = await supabase
+      .from("events")
+      .select("id")
+      .eq("slug", slug)
+      .single();
+
+    if (!eventData || session.event_id !== eventData.id) return null;
+
+    return { sessionId: session.id, eventId: eventData.id, guestName };
+  }
+
+  // `retaken` shots are still uploaded (never silently discarded — kept as
+  // outtakes) but must not affect the shot-limit counters/badges, since they
+  // don't occupy a shot slot server-side either (see /api/upload).
+  async function uploadInBackground(compressedFile: File, eventId: string, sessionId: string, guestName: string, retaken: boolean = false) {
     const photoId = crypto.randomUUID();
 
     // Always save to IndexedDB first so the photo is never lost
@@ -208,9 +251,12 @@ export default function CameraPage() {
       sessionId,
       guestName,
       timestamp: Date.now(),
+      retaken,
     });
-    setQueuedCount((prev) => prev + 1);
-    setPendingCount((prev) => Math.max(0, prev - 1));
+    if (!retaken) {
+      setQueuedCount((prev) => prev + 1);
+      setPendingCount((prev) => Math.max(0, prev - 1));
+    }
 
     // If online, try to upload immediately
     if (navigator.onLine) {
@@ -220,6 +266,7 @@ export default function CameraPage() {
         formData.append("eventId", eventId);
         formData.append("sessionId", sessionId);
         formData.append("guestName", guestName);
+        formData.append("retaken", String(retaken));
 
         const res = await fetch("/api/upload", {
           method: "POST",
@@ -231,21 +278,34 @@ export default function CameraPage() {
         if (res.ok) {
           // Upload succeeded — remove from queue
           try { await removeQueuedPhoto(photoId); } catch {}
-          setQueuedCount((prev) => Math.max(0, prev - 1));
 
-          setShotsUsed(result.shotsUsed);
-          shotsUsedRef.current = result.shotsUsed;
+          if (!retaken) {
+            setQueuedCount((prev) => Math.max(0, prev - 1));
 
-          if (result.shotsUsed >= photoLimit) {
-            router.push(`/e/${slug}/done`);
+            setShotsUsed(result.shotsUsed);
+            shotsUsedRef.current = result.shotsUsed;
+
+            if (result.shotsUsed >= photoLimit) {
+              router.push(`/e/${slug}/done`);
+            }
           }
         } else if (res.status === 403 || res.status === 404) {
           // Server-side rejection (limit reached / event gone) can never
           // succeed on retry — drop it instead of leaving it queued forever.
           try { await removeQueuedPhoto(photoId); } catch {}
-          setQueuedCount((prev) => Math.max(0, prev - 1));
-          if (res.status === 403) {
-            router.push(`/e/${slug}/done`);
+          if (!retaken) {
+            setQueuedCount((prev) => Math.max(0, prev - 1));
+            // A capture that silently fails to save is worse than one that
+            // visibly fails — the guest otherwise has no way to know a shot
+            // didn't count, and used to get bounced off this page with zero
+            // explanation. Show what happened before moving them along.
+            if (res.status === 403) {
+              setUploadNotice("You've already reached your shot limit for this session — wrapping up.");
+              setTimeout(() => router.push(`/e/${slug}/done`), 2000);
+            } else {
+              setUploadNotice("This session is no longer valid — restarting.");
+              setTimeout(() => router.push(`/e/${slug}`), 2000);
+            }
           }
         }
         // Otherwise (network/server error) — stays in queue, will retry later
@@ -257,7 +317,9 @@ export default function CameraPage() {
 
   async function capture() {
     if (!videoRef.current || !canvasRef.current) return;
-    if (shotsUsedRef.current + pendingCount + queuedCount >= photoLimit) return;
+    if (reviewFile) return; // a final-shot decision is still pending
+    const totalSoFar = shotsUsedRef.current + pendingCount + queuedCount;
+    if (totalSoFar >= photoLimit) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -280,23 +342,32 @@ export default function CameraPage() {
 
     stampNameOnCanvas(canvas);
 
-    // capture thumbnail for animation
-    const thumbCanvas = document.createElement("canvas");
-    thumbCanvas.width = 160;
-    thumbCanvas.height = Math.round(160 * (canvas.height / canvas.width));
-    const thumbCtx = thumbCanvas.getContext("2d");
-    if (thumbCtx) {
-      thumbCtx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
-      const thumbUrl = thumbCanvas.toDataURL("image/webp", 0.8);
-      setCapturedImage(thumbUrl);
-      setTimeout(() => setCapturedImage(null), 1400);
+    // This capture would consume the guest's last shot — once the session
+    // ends there's no recovering a bad final photo, so gate it behind a
+    // review step instead of auto-uploading like every other shot.
+    const isFinalShot = totalSoFar + 1 >= photoLimit;
+
+    if (!isFinalShot) {
+      // capture thumbnail for animation
+      const thumbCanvas = document.createElement("canvas");
+      thumbCanvas.width = 160;
+      thumbCanvas.height = Math.round(160 * (canvas.height / canvas.width));
+      const thumbCtx = thumbCanvas.getContext("2d");
+      if (thumbCtx) {
+        thumbCtx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+        const thumbUrl = thumbCanvas.toDataURL("image/webp", 0.8);
+        setCapturedImage(thumbUrl);
+        setTimeout(() => setCapturedImage(null), 1400);
+      }
     }
 
     // white flash
     setFlash(true);
     setTimeout(() => setFlash(false), 100);
 
-    setPendingCount((prev) => prev + 1);
+    if (!isFinalShot) {
+      setPendingCount((prev) => prev + 1);
+    }
 
     try {
       const blob = await new Promise<Blob | null>((resolve) =>
@@ -304,7 +375,7 @@ export default function CameraPage() {
       );
 
       if (!blob) {
-        setPendingCount((prev) => Math.max(0, prev - 1));
+        if (!isFinalShot) setPendingCount((prev) => Math.max(0, prev - 1));
         return;
       }
 
@@ -318,35 +389,62 @@ export default function CameraPage() {
         }
       );
 
-      const sessionToken = localStorage.getItem("current_session_token");
-      const guestName = localStorage.getItem("current_guest_name") || "";
-      if (!sessionToken) return;
-
-      const { data: session } = await supabase
-        .from("sessions")
-        .select("id, event_id")
-        .eq("session_token", sessionToken)
-        .single();
-
-      if (!session) return;
-
-      const { data: eventData } = await supabase
-        .from("events")
-        .select("id")
-        .eq("slug", slug)
-        .single();
-
-      if (!eventData || session.event_id !== eventData.id) return;
-
-      uploadInBackground(compressedFile, eventData.id, session.id, guestName);
-
-      // Redirect immediately if user has reached the photo limit — don't wait for uploads
-      if (shotsUsedRef.current + pendingCount + queuedCount + 1 >= photoLimit) {
-        router.push(`/e/${slug}/done`);
+      if (isFinalShot) {
+        setReviewFile(compressedFile);
+        setReviewPreviewUrl(URL.createObjectURL(compressedFile));
+        return;
       }
+
+      const resolved = await resolveSessionAndEvent();
+      if (!resolved) {
+        setPendingCount((prev) => Math.max(0, prev - 1));
+        return;
+      }
+
+      uploadInBackground(compressedFile, resolved.eventId, resolved.sessionId, resolved.guestName);
     } catch {
-      setPendingCount((prev) => Math.max(0, prev - 1));
+      if (!isFinalShot) setPendingCount((prev) => Math.max(0, prev - 1));
     }
+  }
+
+  async function handleApproveReview() {
+    if (!reviewFile) return;
+    setReviewSubmitting(true);
+
+    const approvedFile = reviewFile;
+    const previewUrl = reviewPreviewUrl;
+    const resolved = await resolveSessionAndEvent();
+
+    if (resolved) {
+      setPendingCount((prev) => prev + 1);
+      uploadInBackground(approvedFile, resolved.eventId, resolved.sessionId, resolved.guestName);
+    }
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setReviewFile(null);
+    setReviewPreviewUrl(null);
+    setReviewSubmitting(false);
+
+    // This is always the guest's final shot — no need to wait for the upload.
+    router.push(`/e/${slug}/done`);
+  }
+
+  async function handleRetakeReview() {
+    if (!reviewFile) return;
+    setReviewSubmitting(true);
+
+    const retakenFile = reviewFile;
+    const previewUrl = reviewPreviewUrl;
+    const resolved = await resolveSessionAndEvent();
+
+    if (resolved) {
+      uploadInBackground(retakenFile, resolved.eventId, resolved.sessionId, resolved.guestName, true);
+    }
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setReviewFile(null);
+    setReviewPreviewUrl(null);
+    setReviewSubmitting(false);
   }
 
   function toggleCamera() {
@@ -404,6 +502,15 @@ export default function CameraPage() {
       {/* white flash */}
       {flash && (
         <div className="absolute inset-0 z-30 bg-white opacity-70" />
+      )}
+
+      {/* upload rejection notice */}
+      {uploadNotice && (
+        <div className="pointer-events-none absolute inset-x-0 top-24 z-30 flex justify-center px-6">
+          <div className="rounded-xl bg-black/85 backdrop-blur-sm border border-white/10 px-4 py-3 text-center text-sm font-medium text-white shadow-xl">
+            {uploadNotice}
+          </div>
+        </div>
       )}
 
       {/* capture animation */}
@@ -498,7 +605,7 @@ export default function CameraPage() {
           {/* Main button */}
           <button
             onClick={capture}
-            disabled={!ready || shotsUsed + pendingCount + queuedCount >= photoLimit}
+            disabled={!ready || !!reviewFile || shotsUsed + pendingCount + queuedCount >= photoLimit}
             className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-sp-coral via-sp-magenta to-sp-violet shadow-xl shadow-sp-magenta/20 transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             {/* Inner white ring */}
@@ -515,6 +622,15 @@ export default function CameraPage() {
           {shotsUsed + pendingCount + queuedCount >= photoLimit ? "You've reached the limit" : "Tap to capture"}
         </p>
       </div>
+
+      {reviewFile && reviewPreviewUrl && (
+        <ShotReviewModal
+          previewUrl={reviewPreviewUrl}
+          submitting={reviewSubmitting}
+          onApprove={handleApproveReview}
+          onRetake={handleRetakeReview}
+        />
+      )}
     </div>
   );
 }

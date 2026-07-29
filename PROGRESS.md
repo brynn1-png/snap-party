@@ -1,6 +1,6 @@
 # SnapParty — Progress Tracker
 
-**Last updated:** July 28, 2026
+**Last updated:** July 29, 2026
 
 ---
 
@@ -35,6 +35,7 @@
 - [x] Event link sharing — copy-link button (in addition to QR)
 - [x] Live Slideshow — continuous auto-rotating display (`/live/[slug]`, TV/projector-friendly)
 - [x] Guestbook messages — guest-submitted messages shown alongside gallery, real-time
+- [x] Outtakes tab — shots guests retook on their final shot are kept (not discarded), shown in a separate dashboard tab, excluded from ZIP/slideshow/default gallery
 
 #### Guest Experience
 - [x] Landing page `/e/[slug]` — event lookup + session creation
@@ -46,6 +47,7 @@
 - [x] Background uploads — no blocking modal, queue indicator
 - [x] Offline queue — IndexedDB queue + background sync worker, retries on reconnect
 - [x] Capture animation — white flash + photo fly to corner
+- [x] Final-shot review — the shot that would consume the guest's last slot pops a preview modal (Approve/Retake) instead of auto-uploading; earlier shots stay auto-upload with no gate
 - [x] Thank-you / completion screen — includes "leave a message" guestbook form
 
 #### Upload Pipeline
@@ -67,7 +69,7 @@
 
 - [ ] Real text/name search over gallery (only an all/photos filter tab exists today, not a search box)
 - [ ] Detailed event analytics (peak upload times, storage used)
-- [ ] Photo preview before upload (retake option)
+- [x] ~~Photo preview before upload (retake option)~~ — shipped, scoped to the final shot only (see Guest Experience above)
 
 ---
 
@@ -147,6 +149,7 @@ snap-party/
 │   │   ├── CtaBanner.tsx
 │   │   ├── Footer.tsx
 │   │   ├── Slideshow.tsx               # Auto-rotating real-time photo display
+│   │   ├── ShotReviewModal.tsx         # Approve/retake preview for the final shot
 │   │   ├── Carousel.tsx                # Gallery carousel view
 │   │   ├── MobileShowcase.tsx
 │   │   ├── LiveEventExperience.tsx

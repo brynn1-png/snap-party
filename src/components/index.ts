@@ -10,4 +10,5 @@ export { default as CtaBanner } from "./CtaBanner";
 export { default as Footer } from "./Footer";
 export { default as Carousel } from "./Carousel";
 export { default as Slideshow } from "./Slideshow";
+export { default as ShotReviewModal } from "./ShotReviewModal";
 export { default as ScrollReveal } from "./ScrollReveal";

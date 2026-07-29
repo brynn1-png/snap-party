@@ -18,6 +18,7 @@ interface Photo {
   uploaded_at: string;
   session_id: string;
   guest_name: string | null;
+  status: string;
 }
 
 export default function LivePage({
@@ -77,6 +78,7 @@ export default function LivePage({
         .from("photos")
         .select("*")
         .eq("event_id", eventData.id)
+        .eq("status", "approved")
         .order("uploaded_at", { ascending: false });
 
       if (photosData) setPhotos(photosData);
@@ -95,7 +97,9 @@ export default function LivePage({
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "photos", filter: `event_id=eq.${event.id}` },
         (payload) => {
-          setPhotos((prev) => [payload.new as Photo, ...prev]);
+          const newPhoto = payload.new as Photo;
+          if (newPhoto.status !== "approved") return;
+          setPhotos((prev) => [newPhoto, ...prev]);
         }
       )
       .on(

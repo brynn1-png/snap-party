@@ -5,7 +5,7 @@ created: 2026-07-27
 
 # Guest Flow
 
-Part of [[SnapParty]]. Guiding UX principle: every guest-facing interaction should require the **minimum possible number of taps** — no submit button, the shutter action *is* the upload action.
+Part of [[SnapParty]]. Guiding UX principle: every guest-facing interaction should require the **minimum possible number of taps** — no submit button, the shutter action *is* the upload action. One deliberate exception: the guest's *final* shot (see "Final-shot review" below).
 
 ## Flow
 
@@ -20,10 +20,22 @@ Anonymous session created, session_token stored in localStorage
     ↓
 /e/[slug]/camera — full-screen camera, front/rear toggle, "N shots remaining"
     ↓
-Capture → client-side compression → auto-upload (no submit button, repeats up to photo_limit)
+Capture → client-side compression → auto-upload (no submit button, repeats up to photo_limit - 1)
+    ↓
+Final shot → review modal (approve/retake) instead of auto-upload
     ↓
 /e/[slug]/done — thank-you / completion screen
 ```
+
+## Final-shot review (2026-07-29)
+
+Every shot except the last still auto-uploads with zero gate, unchanged from the original "shutter = upload" design. Only the shot that would consume the guest's *last* remaining slot is held back, because once the session ends there's no way to go back and retake a bad final photo — every earlier shot is recoverable in the sense that the guest still has attempts left.
+
+- `capture()` in `/e/[slug]/camera/page.tsx` detects this case (`shotsUsed + pendingCount + queuedCount + 1 >= photoLimit`) and, instead of uploading, holds the compressed file and shows `ShotReviewModal` (see [[Components]]) with **Retake** / **Use This Photo**.
+- **Approve** uploads normally (`status = 'approved'`, counts toward `shots_used`) and redirects to `/e/[slug]/done`.
+- **Retake** still uploads the rejected shot — nothing a guest captures is silently discarded — but tagged `status = 'retaken'`, stored under `events/{event-id}/{session-id}/retaken/` (see [[Photos Table]]), and does **not** increment `shots_used`. The guest is returned to the live camera to try the final shot again.
+- Retaken shots flow through the same [[Offline Queue]] path as everything else, just with a `retaken` flag threaded through `QueuedPhoto` → `/api/upload`.
+- Retaken shots are excluded from the guest-facing gallery, [[Live Slideshow]], and ZIP export — they only ever surface in the organizer dashboard's Outtakes tab, see [[Organizer Flow]].
 
 ## QR token validation (`/e/[slug]/page.tsx`)
 

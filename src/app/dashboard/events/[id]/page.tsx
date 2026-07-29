@@ -25,6 +25,7 @@ interface Photo {
   uploaded_at: string;
   session_id: string;
   guest_name: string | null;
+  status: "approved" | "retaken";
 }
 
 interface Session {
@@ -127,6 +128,7 @@ export default function EventDetailPage({
   const { id } = use(params);
   const [event, setEvent] = useState<EventData | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [outtakePhotos, setOuttakePhotos] = useState<Photo[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [loading, setLoading] = useState(true);
@@ -135,7 +137,7 @@ export default function EventDetailPage({
   const [coverError, setCoverError] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [galleryFilter, setGalleryFilter] = useState<"all" | "photos">("all");
+  const [galleryFilter, setGalleryFilter] = useState<"all" | "photos" | "outtakes">("all");
   const [galleryView, setGalleryView] = useState<"grid" | "list" | "carousel">("grid");
   const [slideshowStartIndex, setSlideshowStartIndex] = useState<number | null>(null);
   const [regeneratingQr, setRegeneratingQr] = useState(false);
@@ -193,9 +195,19 @@ export default function EventDetailPage({
           .from("photos")
           .select("*")
           .eq("event_id", id)
+          .eq("status", "approved")
           .order("uploaded_at", { ascending: false });
 
         if (photosData) setPhotos(photosData);
+
+        const { data: outtakesData } = await supabase
+          .from("photos")
+          .select("*")
+          .eq("event_id", id)
+          .eq("status", "retaken")
+          .order("uploaded_at", { ascending: false });
+
+        if (outtakesData) setOuttakePhotos(outtakesData);
 
         const { data: sessionsData } = await supabase
           .from("sessions")
@@ -227,14 +239,21 @@ export default function EventDetailPage({
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "photos", filter: `event_id=eq.${event.id}` },
         (payload) => {
-          setPhotos((prev) => [payload.new as Photo, ...prev]);
+          const newPhoto = payload.new as Photo;
+          if (newPhoto.status === "retaken") {
+            setOuttakePhotos((prev) => [newPhoto, ...prev]);
+          } else {
+            setPhotos((prev) => [newPhoto, ...prev]);
+          }
         }
       )
       .on(
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "photos", filter: `event_id=eq.${event.id}` },
         (payload) => {
-          setPhotos((prev) => prev.filter((p) => p.id !== (payload.old as Photo).id));
+          const deletedId = (payload.old as Photo).id;
+          setPhotos((prev) => prev.filter((p) => p.id !== deletedId));
+          setOuttakePhotos((prev) => prev.filter((p) => p.id !== deletedId));
         }
       )
       .on(
@@ -263,18 +282,28 @@ export default function EventDetailPage({
         .from("photos")
         .select("*")
         .eq("event_id", event.id)
+        .eq("status", "approved")
         .order("uploaded_at", { ascending: false });
 
       if (data) setPhotos(data);
+
+      const { data: outtakes } = await supabase
+        .from("photos")
+        .select("*")
+        .eq("event_id", event.id)
+        .eq("status", "retaken")
+        .order("uploaded_at", { ascending: false });
+
+      if (outtakes) setOuttakePhotos(outtakes);
     }, 10000);
 
     return () => clearInterval(interval);
   }, [event, supabase]);
 
   const filteredPhotos = useMemo(() => {
-    if (galleryFilter === "photos") return photos;
+    if (galleryFilter === "outtakes") return outtakePhotos;
     return photos;
-  }, [photos, galleryFilter]);
+  }, [photos, outtakePhotos, galleryFilter]);
 
   const todayPhotos = photos.filter((p) => {
     const d = new Date(p.uploaded_at);
@@ -551,7 +580,7 @@ export default function EventDetailPage({
 
               {/* Filter tabs */}
               <div className="flex items-center gap-1 mb-5 p-1 bg-white/5 rounded-lg w-fit">
-                {(["all", "photos"] as const).map((f) => (
+                {(["all", "photos", "outtakes"] as const).map((f) => (
                   <button
                     key={f}
                     onClick={() => setGalleryFilter(f)}
@@ -561,7 +590,7 @@ export default function EventDetailPage({
                         : "text-white/40 hover:text-white/70"
                     }`}
                   >
-                    {f}
+                    {f === "outtakes" ? `Outtakes (${outtakePhotos.length})` : f}
                   </button>
                 ))}
               </div>
